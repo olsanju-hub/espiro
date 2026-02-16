@@ -1,5 +1,5 @@
 // js/simulador.js
-import { num, pctChange, escapeHTML } from './utils.js';
+import { num, escapeHTML } from './utils.js';
 
 export function renderSimulador(root){
   root.innerHTML = `
@@ -24,14 +24,14 @@ export function renderSimulador(root){
 
         <div class="row2">
           <div class="field">
-            <label>FEV1 % pred (opcional, para gravedad)</label>
+            <label>FEV1 % pred (recomendado)</label>
             <input inputmode="decimal" id="fev1Pct" placeholder="Ej: 62" />
-            <div class="small">Si no lo pones, la app no gradúa la obstrucción.</div>
+            <div class="small">Si lo aportas, la app puede confirmar normalidad y graduar obstrucción.</div>
           </div>
           <div class="field">
-            <label>FVC % pred (necesario para restricción/mixto)</label>
+            <label>FVC % pred (recomendado)</label>
             <input inputmode="decimal" id="fvcPct" placeholder="Ej: 74" />
-            <div class="small">Umbral operativo: FVC &lt; 80% pred sugiere restricción (según esquema habitual).</div>
+            <div class="small">Umbral operativo: FVC &lt; 80% pred sugiere restricción (orientativo; confirmar con volúmenes si procede).</div>
           </div>
         </div>
 
@@ -50,7 +50,7 @@ export function renderSimulador(root){
               <input inputmode="decimal" id="llnRatio" placeholder="Ej: 0.68" />
             </div>
           </div>
-          <div class="small">Por defecto usa 0,70 como en tu algoritmo visual. Si eliges LLN, se usa el valor que introduzcas.</div>
+          <div class="small">Por defecto usa 0,70. Si eliges LLN, se usa el valor que introduzcas.</div>
         </div>
 
         <div class="card" style="border-radius:16px; margin-top:12px;">
@@ -65,7 +65,7 @@ export function renderSimulador(root){
               <input inputmode="decimal" id="fvcPost" placeholder="Ej: 3.55" />
             </div>
           </div>
-          <div class="small">Cálculo automático: positiva si ≥12% y ≥200 ml en FEV1 o FVC (vs basal).</div>
+          <div class="small">Positiva si ≥12% y ≥200 ml en FEV1 o FVC (vs basal).</div>
         </div>
 
         <div class="action-row" style="margin-top:12px;">
@@ -83,6 +83,7 @@ export function renderSimulador(root){
 
   const form = root.querySelector('#formSim');
   const out = root.querySelector('#out');
+
   root.querySelector('#resetBtn').addEventListener('click', ()=>{
     form.reset();
     out.className = 'result warn';
@@ -103,7 +104,7 @@ export function renderSimulador(root){
       return;
     }
 
-    const ratio = fev1Pre / fvcPre;
+    const ratioPre = fev1Pre / fvcPre;
 
     const mode = root.querySelector('#ratioMode').value;
     let cutoff = 0.70;
@@ -117,35 +118,52 @@ export function renderSimulador(root){
       cutoff = lln;
     }
 
-    const hasFvcPct = (fvcPct != null);
-    const isObs = ratio < cutoff;
+    const hasFev1Pct = (fev1Pct != null);
+    const hasFvcPct  = (fvcPct != null);
+
+    const isObs = ratioPre < cutoff;
     const isLowFvc = hasFvcPct ? (fvcPct < 80) : false;
 
+    // Patrón (con aviso si faltan %pred)
     let pattern = 'Indeterminado';
-    let patternWhy = [];
+    const why = [];
 
-    if (isObs && hasFvcPct && isLowFvc) {
+    if (isObs && hasFvcPct && isLowFvc){
       pattern = 'Mixto (obstrucción + posible restricción)';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} < ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
-      patternWhy.push('Recomendación práctica: confirmar restricción con volúmenes pulmonares (p. ej., pletismografía) si aplica.');
-    } else if (isObs) {
+      why.push(`FEV1/FVC pre ${ratioPre.toFixed(2)} < ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
+      why.push('Confirmar restricción con volúmenes pulmonares (TLC/pletismografía) si procede.');
+    } else if (isObs){
       pattern = 'Obstructivo';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} < ${cutoff.toFixed(2)}`);
-    } else if (!isObs && hasFvcPct && isLowFvc) {
+      why.push(`FEV1/FVC pre ${ratioPre.toFixed(2)} < ${cutoff.toFixed(2)}`);
+      if (!hasFev1Pct) why.push('Falta FEV1 %pred: no se puede graduar severidad.');
+    } else if (!isObs && hasFvcPct && isLowFvc){
       pattern = 'Sugerente de restricción';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
-      patternWhy.push('Confirmar restricción con TLC/volúmenes pulmonares si es relevante clínicamente.');
-    } else if (!isObs && hasFvcPct && !isLowFvc) {
-      pattern = 'Normal (según estos parámetros)';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} ≥ 80`);
+      why.push(`FEV1/FVC pre ${ratioPre.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
+      why.push('Confirmar restricción con volúmenes pulmonares si es relevante clínicamente.');
+    } else if (!isObs && hasFvcPct && !isLowFvc){
+      // Aquí integramos FEV1%pred si lo tienes (tu punto 7)
+      if (hasFev1Pct && fev1Pct < 80){
+        pattern = 'Sin obstrucción por ratio; FEV1 %pred bajo (revisar contexto)';
+        why.push(`FEV1/FVC pre ${ratioPre.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} ≥ 80`);
+        why.push(`Pero FEV1 %pred ${fev1Pct.toFixed(0)} < 80: revisar calidad, técnica, y clínica.`);
+      } else {
+        pattern = 'Normal (según estos parámetros)';
+        why.push(`FEV1/FVC pre ${ratioPre.toFixed(2)} ≥ ${cutoff.toFixed(2)}`);
+        why.push(`FVC %pred ${fvcPct.toFixed(0)} ≥ 80`);
+        if (hasFev1Pct) why.push(`FEV1 %pred ${fev1Pct.toFixed(0)} ≥ 80`);
+        else why.push('Falta FEV1 %pred: normalidad “incompleta” (aporta FEV1 %pred si lo tienes).');
+      }
     } else {
-      pattern = isObs ? 'Obstructivo' : 'Sin obstrucción por ratio; falta FVC %pred para clasificar restricción';
-      if (!hasFvcPct) patternWhy.push('Falta FVC %pred: no puedo clasificar restricción/mixto con seguridad.');
+      pattern = isObs
+        ? 'Obstructivo'
+        : 'Sin obstrucción por ratio; faltan %pred para clasificar restricción/normalidad';
+      if (!hasFvcPct) why.push('Falta FVC %pred: no puedo clasificar restricción/mixto con seguridad.');
+      if (!hasFev1Pct) why.push('Falta FEV1 %pred: no puedo confirmar normalidad ni graduar.');
     }
 
-    // Gravedad (si FEV1% pred)
+    // Gravedad (solo si obstructivo/mixto y hay FEV1%pred)
     let severity = null;
-    if (isObs && fev1Pct != null){
+    if ((pattern.startsWith('Obstructivo') || pattern.startsWith('Mixto')) && hasFev1Pct){
       const p = fev1Pct;
       if (p >= 80) severity = 'Leve (FEV1 ≥80% pred)';
       else if (p >= 50) severity = 'Moderada (FEV1 50–79% pred)';
@@ -153,9 +171,15 @@ export function renderSimulador(root){
       else severity = 'Muy grave (FEV1 <30% pred)';
     }
 
-    // PBD
+    // PBD (cálculo directo, sin depender de pctChange())
     const fev1Post = num(root.querySelector('#fev1Post').value);
     const fvcPost  = num(root.querySelector('#fvcPost').value);
+
+    const deltaInfo = (pre, post)=>{
+      const d = post - pre;
+      const pct = pre > 0 ? (d / pre) * 100 : null;
+      return { d, pct };
+    };
 
     let pbd = null;
     if (fev1Post != null || fvcPost != null){
@@ -163,39 +187,41 @@ export function renderSimulador(root){
       let positive = false;
 
       if (fev1Post != null){
-        const d = fev1Post - fev1Pre;
-        const pc = pctChange(fev1Post, fev1Pre);
-        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        const { d, pct } = deltaInfo(fev1Pre, fev1Post);
+        const ok = (d >= 0.20) && (pct != null && pct >= 12);
         if (ok) positive = true;
-        parts.push(`FEV1: +${d.toFixed(2)} L (${pc?.toFixed(1)}%) ${ok ? '→ cumple' : ''}`);
+        parts.push(`FEV1: ${d>=0?'+':''}${d.toFixed(2)} L (${pct!=null ? pct.toFixed(1) : '—'}%) ${ok ? '→ cumple' : ''}`);
       }
 
       if (fvcPost != null){
-        const d = fvcPost - fvcPre;
-        const pc = pctChange(fvcPost, fvcPre);
-        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        const { d, pct } = deltaInfo(fvcPre, fvcPost);
+        const ok = (d >= 0.20) && (pct != null && pct >= 12);
         if (ok) positive = true;
-        parts.push(`FVC: +${d.toFixed(2)} L (${pc?.toFixed(1)}%) ${ok ? '→ cumple' : ''}`);
+        parts.push(`FVC: ${d>=0?'+':''}${d.toFixed(2)} L (${pct!=null ? pct.toFixed(1) : '—'}%) ${ok ? '→ cumple' : ''}`);
       }
 
-      pbd = {
-        positive,
-        detail: parts.join('<br>')
-      };
+      pbd = { positive, detail: parts.join('<br>') };
     }
 
     const html = `
       <div><strong>Patrón:</strong> ${escapeHTML(pattern)}</div>
-      <div class="small" style="margin-top:6px;">${patternWhy.map(x=>`• ${escapeHTML(x)}`).join('<br>')}</div>
-      <div style="margin-top:10px;"><strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (umbral ${cutoff.toFixed(2)} · modo ${mode === 'fixed' ? '0,70' : 'LLN'})</div>
-      ${severity ? `<div style="margin-top:6px;"><strong>Gravedad obstrucción:</strong> ${escapeHTML(severity)}</div>` : ''}
+      <div class="small" style="margin-top:6px;">${why.map(x=>`• ${escapeHTML(x)}`).join('<br>')}</div>
+
+      <div style="margin-top:10px;"><strong>FEV1/FVC (pre):</strong> ${ratioPre.toFixed(2)} (umbral ${cutoff.toFixed(2)} · modo ${mode === 'fixed' ? '0,70' : 'LLN'})</div>
+
+      ${hasFev1Pct ? `<div style="margin-top:6px;"><strong>FEV1 %pred:</strong> ${fev1Pct.toFixed(0)}%</div>` : ''}
+      ${hasFvcPct ? `<div style="margin-top:6px;"><strong>FVC %pred:</strong> ${fvcPct.toFixed(0)}%</div>` : ''}
+
+      ${severity ? `<div style="margin-top:10px;"><strong>Gravedad (si aplica):</strong> ${escapeHTML(severity)}</div>` : ''}
+
       ${pbd ? `
-        <div style="margin-top:10px;"><strong>PBD:</strong> ${pbd.positive ? 'Positiva' : 'No positiva por criterio ≥12% y ≥200 ml'}</div>
+        <div style="margin-top:12px;"><strong>PBD:</strong> ${pbd.positive ? 'Positiva' : 'No positiva (≥12% y ≥200 ml)'}</div>
         <div class="small" style="margin-top:6px;">${pbd.detail}</div>
-        <div class="small" style="margin-top:8px;">Nota: una PBD positiva <strong>no equivale automáticamente</strong> a diagnóstico de asma; integrar con clínica y evolución.</div>
+        <div class="small" style="margin-top:8px;">Nota: PBD positiva no equivale automáticamente a diagnóstico de asma; integrar con clínica y evolución.</div>
       ` : ''}
+
       <div class="small" style="margin-top:10px;">
-        Recomendación: comprobar aceptabilidad/reproducibilidad antes de interpretar, y confirmar sospecha diagnóstica con el contexto del paciente.
+        Recuerda: interpretar solo si aceptabilidad/repetibilidad son correctas.
       </div>
     `;
 
