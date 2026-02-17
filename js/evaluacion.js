@@ -17,6 +17,10 @@ export function renderEvaluacion(root){
       <div class="card" style="margin-top:12px;">
         <h3>Datos del caso</h3>
         <div id="caseBox" class="result warn">Pulsa “Nuevo caso”.</div>
+        <div class="small" style="margin-top:10px;">
+          PBD (criterio usado aquí): positiva si ΔFEV1 o ΔFVC ≥10% del valor teórico/predicho.
+          (No se muestra el veredicto: debes calcularlo tú.)
+        </div>
       </div>
 
       <div class="card" style="margin-top:12px;">
@@ -50,17 +54,6 @@ export function renderEvaluacion(root){
             <option value="grave">Grave</option>
             <option value="muygrave">Muy grave</option>
           </select>
-        </div>
-
-        <div class="field" style="margin-top:8px;">
-          <label>Diagnóstico más probable (no bloqueante)</label>
-          <select id="ansDx">
-            <option value="asma">Asma</option>
-            <option value="epoc">EPOC</option>
-            <option value="normal">Normal</option>
-            <option value="indeterminado">Indeterminado (seguir estudio)</option>
-          </select>
-          <div class="small">Se corrige con el perfil clínico del caso. No afecta al resto.</div>
         </div>
 
         <div class="action-row">
@@ -106,15 +99,21 @@ export function renderEvaluacion(root){
           <div><strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (umbral 0,70)</div>
         </div>
         <div>
-          <div><strong>FEV1 post:</strong> ${current.fev1Post.toFixed(2)} L</div>
-          <div><strong>FVC post:</strong> ${current.fvcPost.toFixed(2)} L</div>
           <div><strong>FEV1 % pred:</strong> ${current.fev1Pct.toFixed(0)}%</div>
           <div><strong>FVC % pred:</strong> ${current.fvcPct.toFixed(0)}%</div>
         </div>
       </div>
 
-      <div class="small" style="margin-top:10px;">
-        PBD: Se considera (+) el Aumento de FEV1 o FVC ≥ 12% y aumento absoluto de ≥ 200 ml respecto al valor basal.
+      <div class="hrline" style="margin:12px 0;"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <div><strong>FEV1 post:</strong> ${current.fev1Post.toFixed(2)} L</div>
+          <div><strong>FVC post:</strong> ${current.fvcPost.toFixed(2)} L</div>
+        </div>
+        <div class="small">
+          PBD: calcula ΔFEV1 y ΔFVC y compáralo con el 10% del valor teórico (predicho).
+        </div>
       </div>
     `;
 
@@ -132,15 +131,12 @@ export function renderEvaluacion(root){
     const ansPattern = root.querySelector('#ansPattern').value;
     const ansPbd = root.querySelector('#ansPbd').value;
     const ansSev = root.querySelector('#ansSev').value;
-    const ansDx = root.querySelector('#ansDx').value;
 
     const ok1 = ansPattern === current.pattern;
     const ok2 = ansPbd === (current.pbdPos ? 'pos' : 'neg');
     const ok3 = (current.pattern === 'obstructivo' || current.pattern === 'mixto')
       ? (ansSev === current.sev || ansSev === 'na')
       : true;
-
-    const okDx = ansDx === current.dxExpected;
 
     feedback.className = 'result';
     feedback.innerHTML = `
@@ -149,36 +145,34 @@ export function renderEvaluacion(root){
 
       <div style="margin-top:8px;"><strong>PBD:</strong> ${ok2 ? '✅' : '❌'} (correcto: ${current.pbdPos ? 'pos' : 'neg'})</div>
       <div class="small">${escapeHTML(current.whyPbd)}</div>
-      ${current.pbdPos ? `<div class="small-note">Nota: una PBD positiva no equivale automáticamente a diagnóstico de asma. Interpretar con clínica.</div>` : ''}
 
       <div style="margin-top:8px;"><strong>Gravedad:</strong> ${ok3 ? '✅' : '❌'} (correcto: ${escapeHTML(current.sev)})</div>
       <div class="small">Nota: si marcas “No aplica / no sé” en gravedad, no penaliza.</div>
-
-      <div style="margin-top:10px;"><strong>Diagnóstico más probable:</strong> ${okDx ? '✅' : '❌'}
-        (correcto: ${escapeHTML(labelDx(current.dxExpected))})
-      </div>
-      <div class="small">${escapeHTML(current.whyDx)}</div>
     `;
   });
 
   function genCase(){
+    // Demografía
     const age = Math.floor(rand(18, 86));
     const sex = Math.random() < 0.5 ? 'Varón' : 'Mujer';
     const height = Math.floor(rand(150, 196));
     const weight = 80;
 
+    // Perfil clínico (no bloqueante)
     const profiles = [
-      { name: 'Sospecha asma (variabilidad)', symptoms: 'Tos + sibilancias episódicas, empeora con ejercicio/frío', dx: 'asma' },
-      { name: 'Sospecha EPOC', symptoms: 'Disnea progresiva + tos crónica, fumador', dx: 'epoc' },
-      { name: 'Disnea de causa no aclarada', symptoms: 'Disnea de esfuerzo + fatiga, sin sibilancias claras', dx: 'indeterminado' },
-      { name: 'Control/seguimiento', symptoms: 'Asintomático o síntomas leves, revisión', dx: 'normal' }
+      { name: 'Sospecha asma (variabilidad)', symptoms: 'Tos + sibilancias episódicas, empeora con ejercicio/frío' },
+      { name: 'Sospecha EPOC', symptoms: 'Disnea progresiva + tos crónica, fumador' },
+      { name: 'Disnea de causa no aclarada', symptoms: 'Disnea de esfuerzo + fatiga, sin sibilancias claras' },
+      { name: 'Control/seguimiento', symptoms: 'Asintomático o síntomas leves, revisión' }
     ];
     const pick = profiles[Math.floor(Math.random()*profiles.length)];
     const profile = pick.name;
     const symptoms = pick.symptoms;
 
+    // Generación base
     const fvcPre = rand(2.4, 5.0);
 
+    // Decide patrón objetivo
     const roll = Math.random();
     let target = 'obstructivo';
     if (roll < 0.25) target = 'normal';
@@ -213,46 +207,56 @@ export function renderEvaluacion(root){
 
     const fev1Pre = fvcPre * ratio;
 
+    // Derivar predichos desde % (para poder aplicar criterio ≥10% predicho)
+    const fev1Pred = fev1Pre / (fev1Pct/100);
+    const fvcPred  = fvcPre  / (fvcPct/100);
+
+    // Probabilidad de PBD según perfil
     let pbdProb = 0.30;
     if (profile.includes('asma')) pbdProb = 0.55;
     if (profile.includes('EPOC')) pbdProb = 0.25;
 
-    const pbdPos = Math.random() < pbdProb;
-
+    // Genera post
     let fev1Post = fev1Pre;
     let fvcPost = fvcPre;
 
-    if (pbdPos){
+    const wantPos = Math.random() < pbdProb;
+
+    if (wantPos){
+      // Asegurar que cumple ≥10% del predicho en FEV1 o FVC
       if (Math.random() < 0.65){
-        fev1Post = fev1Pre + rand(0.20, 0.55);
+        fev1Post = fev1Pre + rand(0.10*fev1Pred, 0.18*fev1Pred);
+        fvcPost  = fvcPre  + rand(-0.03, 0.08);
       } else {
-        fvcPost = fvcPre + rand(0.20, 0.55);
+        fvcPost  = fvcPre  + rand(0.10*fvcPred, 0.18*fvcPred);
+        fev1Post = fev1Pre + rand(-0.03, 0.08);
       }
     } else {
-      fev1Post = Math.min(fev1Pre + rand(-0.05, 0.15), fev1Pre + 0.18);
-      fvcPost  = Math.min(fvcPre + rand(-0.05, 0.15), fvcPre + 0.18);
+      // No cumple
+      fev1Post = fev1Pre + rand(-0.05, 0.08*fev1Pred);
+      fvcPost  = fvcPre  + rand(-0.05, 0.08*fvcPred);
     }
+
+    const dFev1 = fev1Post - fev1Pre;
+    const dFvc  = fvcPost  - fvcPre;
+    const pbdPos = (dFev1 >= 0.10*fev1Pred) || (dFvc >= 0.10*fvcPred);
 
     const sev = (target === 'obstructivo' || target === 'mixto') ? sevFromFev1(fev1Pct) : 'na';
 
     const whyPattern = buildWhyPattern(target, ratio, fvcPct);
-    const whyPbd = buildWhyPbd(pbdPos, fev1Pre, fev1Post, fvcPre, fvcPost);
-
-    const dxExpected = pick.dx;
-    const whyDx = buildWhyDx(dxExpected, profile, target, pbdPos);
+    const whyPbd = buildWhyPbd(pbdPos, dFev1, dFvc, fev1Pred, fvcPred);
 
     return {
       age, sex, height, weight,
       symptoms, profile,
       fev1Pre, fvcPre, fev1Post, fvcPost,
       fev1Pct, fvcPct,
+      fev1Pred, fvcPred,
       pattern: target,
       pbdPos,
       sev,
       whyPattern,
-      whyPbd,
-      dxExpected,
-      whyDx
+      whyPbd
     };
   }
 
@@ -269,40 +273,13 @@ export function renderEvaluacion(root){
     return `FEV1/FVC ${ratio.toFixed(2)} ≥ 0,70 y FVC% pred ${Math.round(fvcPct)} ≥80 ⇒ patrón normal con estos parámetros (si clínica manda, seguir estudiando).`;
   }
 
-  function buildWhyPbd(pbdPos, fev1Pre, fev1Post, fvcPre, fvcPost){
-    const dFev1 = fev1Post - fev1Pre;
-    const dFvc  = fvcPost - fvcPre;
-    const pcFev1 = (fev1Pre > 0) ? (dFev1/fev1Pre*100) : 0;
-    const pcFvc  = (fvcPre > 0) ? (dFvc/fvcPre*100) : 0;
-
-    const fev1Ok = (pcFev1 >= 12) && (dFev1 >= 0.2);
-    const fvcOk  = (pcFvc  >= 12) && (dFvc  >= 0.2);
-
+  function buildWhyPbd(pbdPos, dFev1, dFvc, fev1Pred, fvcPred){
+    const fev1Ok = dFev1 >= 0.10*fev1Pred;
+    const fvcOk  = dFvc  >= 0.10*fvcPred;
     if (pbdPos){
-      const which = fev1Ok ? 'FEV1' : (fvcOk ? 'FVC' : 'FEV1/FVC');
-      return `Cumple criterio en ${which} (≥12% y ≥200 ml). (FEV1 +${dFev1.toFixed(2)}L ${pcFev1.toFixed(0)}% · FVC +${dFvc.toFixed(2)}L ${pcFvc.toFixed(0)}%).`;
+      return `Positiva porque ${fev1Ok ? 'ΔFEV1' : 'ΔFVC'} ≥10% del predicho. (ΔFEV1 ${dFev1.toFixed(2)}L vs 10%pred ${(0.10*fev1Pred).toFixed(2)}L · ΔFVC ${dFvc.toFixed(2)}L vs 10%pred ${(0.10*fvcPred).toFixed(2)}L).`;
     }
-    return `No cumple ≥12% y ≥200 ml (FEV1 +${dFev1.toFixed(2)}L ${pcFev1.toFixed(0)}% · FVC +${dFvc.toFixed(2)}L ${pcFvc.toFixed(0)}%).`;
-  }
-
-  function buildWhyDx(dx, profile, pattern, pbdPos){
-    if (dx === 'asma'){
-      return `Perfil sugiere variabilidad. Una PBD ${pbdPos ? 'positiva apoya reversibilidad' : 'no positiva no descarta'}; el diagnóstico final depende de la clínica y evolución.`;
-    }
-    if (dx === 'epoc'){
-      return `Perfil de fumador/disnea progresiva. La PBD puede ser ${pbdPos ? 'positiva sin convertirlo en asma' : 'no positiva'}; integrar con clínica.`;
-    }
-    if (dx === 'normal'){
-      return `Contexto de control/seguimiento. Un patrón ${pattern} podría obligar a ampliar estudio, pero este caso está planteado como “normal/seguimiento”.`;
-    }
-    return `Perfil no orienta claramente a asma/EPOC. Si síntomas persisten, seguir estudio según contexto clínico.`;
-  }
-
-  function labelDx(v){
-    if (v === 'asma') return 'Asma';
-    if (v === 'epoc') return 'EPOC';
-    if (v === 'normal') return 'Normal';
-    return 'Indeterminado (seguir estudio)';
+    return `No positiva: ni ΔFEV1 ni ΔFVC alcanzan ≥10% del predicho. (ΔFEV1 ${dFev1.toFixed(2)}L · ΔFVC ${dFvc.toFixed(2)}L).`;
   }
 
   function sevFromFev1(p){
