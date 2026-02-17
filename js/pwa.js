@@ -1,39 +1,39 @@
 // js/pwa.js
-export function initPWA(){
-  // Registrar SW solo en contextos correctos
+export function initPWA() {
   if (!('serviceWorker' in navigator)) return;
 
-  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const isSecure = location.protocol === 'https:' || isLocal;
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
 
-  if (!isSecure) return;
+      // Pide update al entrar (sin que el usuario haga hard refresh)
+      try { await reg.update(); } catch (_) {}
 
-  window.addEventListener('load', async ()=>{
-    try{
-      const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-
-      // Si hay update, forzar activación
-      reg.addEventListener('updatefound', ()=>{
+      // Si encuentra SW nuevo, lo activa y recarga
+      reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
         if (!sw) return;
-        sw.addEventListener('statechange', ()=>{
-          if (sw.state === 'installed' && navigator.serviceWorker.controller){
-            // Hay nueva versión lista: recarga “limpia”
-            sw.postMessage({ type:'SKIP_WAITING' });
+
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed') {
+            // Si ya había controller -> hay update
+            if (navigator.serviceWorker.controller) {
+              try { sw.postMessage({ type: 'SKIP_WAITING' }); } catch (_) {}
+            }
           }
         });
       });
 
-      // Cuando cambie controller, recargar
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-        if (refreshing) return;
-        refreshing = true;
-        location.reload();
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
       });
 
-    }catch(_){
-      // en dev no pasa nada si falla
+    } catch (e) {
+      // si falla, no rompe la app
+      console.warn('PWA init error', e);
     }
   });
 }
