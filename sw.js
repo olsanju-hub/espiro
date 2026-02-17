@@ -1,8 +1,8 @@
 // sw.js
-// Service Worker "anti-app-vieja": versionado + network-first para HTML/JS/CSS/JSON
-const SW_VERSION = 'v2-2026-02-17-01';              // <-- CAMBIA ESTO en cada despliegue
-const CACHE_PREFIX = 'espiro-cache-';
-const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`;
+// Service Worker "anti-app-vieja": network-first para HTML/JS/CSS/JSON
+
+const CACHE_VERSION = 'espiro-v3-2026-02-17';
+const CACHE_NAME = `espiro-cache-${CACHE_VERSION}`;
 
 const CORE = [
   './',
@@ -36,24 +36,17 @@ const CORE = [
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
-
-  // Forzar descarga "real" (evita cache HTTP intermedio en algunos entornos)
-  const requests = CORE.map((url) => new Request(url, { cache: 'reload' }));
-
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(requests))
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // Fuerza bypass de caché HTTP en el primer precache
+    await cache.addAll(CORE.map((url) => new Request(url, { cache: 'reload' })));
+  })());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(
-      keys.map((k) => {
-        if (k.startsWith(CACHE_PREFIX) && k !== CACHE_NAME) return caches.delete(k);
-        return Promise.resolve();
-      })
-    );
+    await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : Promise.resolve())));
     await self.clients.claim();
   })());
 });
@@ -72,11 +65,7 @@ self.addEventListener('fetch', (event) => {
   const dest = req.destination; // 'document' | 'script' | 'style' | 'image' | ...
   const accept = req.headers.get('accept') || '';
   const isHTML = dest === 'document' || accept.includes('text/html');
-  const isCritical =
-    isHTML ||
-    dest === 'script' ||
-    dest === 'style' ||
-    url.pathname.endsWith('.json');
+  const isCritical = isHTML || dest === 'script' || dest === 'style' || url.pathname.endsWith('.json');
 
   // Network-first para evitar “versión vieja”
   if (isCritical) {
@@ -86,7 +75,7 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(CACHE_NAME);
         cache.put(req, fresh.clone());
         return fresh;
-      } catch (_) {
+      } catch (e) {
         const cached = await caches.match(req);
         if (cached) return cached;
         if (isHTML) return caches.match('./index.html');
@@ -106,7 +95,7 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(CACHE_NAME);
       cache.put(req, fresh.clone());
       return fresh;
-    } catch (_) {
+    } catch (e) {
       return new Response('', { status: 504 });
     }
   })());
