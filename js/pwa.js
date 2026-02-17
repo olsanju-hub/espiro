@@ -3,7 +3,7 @@ import { Router } from './router.js';
 import { initDrawer } from './drawer.js';
 import { initBibliografia } from './bibliografia.js';
 import { initModal } from './gallery.js';
-import { initPWA } from './pwa.js';initPWA
+import { initPWA } from './pwa.js';
 
 import { renderPortada, renderMenu } from './routerViews.js';
 import { renderTecnica } from './tecnica.js';
