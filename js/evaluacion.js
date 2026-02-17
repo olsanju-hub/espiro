@@ -106,14 +106,15 @@ export function renderEvaluacion(root){
           <div><strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (umbral 0,70)</div>
         </div>
         <div>
+          <div><strong>FEV1 post:</strong> ${current.fev1Post.toFixed(2)} L</div>
+          <div><strong>FVC post:</strong> ${current.fvcPost.toFixed(2)} L</div>
           <div><strong>FEV1 % pred:</strong> ${current.fev1Pct.toFixed(0)}%</div>
           <div><strong>FVC % pred:</strong> ${current.fvcPct.toFixed(0)}%</div>
-          <div><strong>PBD:</strong> ${current.pbdPos ? 'Positiva' : 'No positiva'}</div>
         </div>
       </div>
 
       <div class="small" style="margin-top:10px;">
-        PBD por criterio ≥12% y ≥200 ml (en FEV1 o FVC). Umbral de obstrucción: FEV1/FVC &lt; 0,70 (modo evaluación).
+        PBD: considera positiva si en FEV1 o FVC hay ≥12% y ≥200 ml frente a basal. (La app no te da el veredicto aquí).
       </div>
     `;
 
@@ -161,13 +162,11 @@ export function renderEvaluacion(root){
   });
 
   function genCase(){
-    // Demografía
-    const age = Math.floor(rand(18, 86)); // 18-85
+    const age = Math.floor(rand(18, 86));
     const sex = Math.random() < 0.5 ? 'Varón' : 'Mujer';
     const height = Math.floor(rand(150, 196));
-    const weight = 80; // fijo, como pediste
+    const weight = 80;
 
-    // Perfil clínico (no bloqueante)
     const profiles = [
       { name: 'Sospecha asma (variabilidad)', symptoms: 'Tos + sibilancias episódicas, empeora con ejercicio/frío', dx: 'asma' },
       { name: 'Sospecha EPOC', symptoms: 'Disnea progresiva + tos crónica, fumador', dx: 'epoc' },
@@ -178,10 +177,8 @@ export function renderEvaluacion(root){
     const profile = pick.name;
     const symptoms = pick.symptoms;
 
-    // Generación de espirometría (coherente con patrón)
     const fvcPre = rand(2.4, 5.0);
 
-    // Decide patrón objetivo
     const roll = Math.random();
     let target = 'obstructivo';
     if (roll < 0.25) target = 'normal';
@@ -189,7 +186,6 @@ export function renderEvaluacion(root){
     else if (roll < 0.75) target = 'restrictivo';
     else target = 'mixto';
 
-    // Ratio y %pred
     let ratio = 0.78;
     let fvcPct = 92;
     let fev1Pct = 88;
@@ -199,19 +195,16 @@ export function renderEvaluacion(root){
       fvcPct = rand(80, 110);
       fev1Pct = rand(80, 115);
     }
-
     if (target === 'obstructivo'){
       ratio = rand(0.35, 0.68);
-      fvcPct = rand(80, 110); // no baja (para no ser mixto)
+      fvcPct = rand(80, 110);
       fev1Pct = rand(25, 85);
     }
-
     if (target === 'restrictivo'){
       ratio = rand(0.70, 0.90);
       fvcPct = rand(55, 79);
       fev1Pct = rand(60, 110);
     }
-
     if (target === 'mixto'){
       ratio = rand(0.35, 0.68);
       fvcPct = rand(55, 79);
@@ -220,7 +213,6 @@ export function renderEvaluacion(root){
 
     const fev1Pre = fvcPre * ratio;
 
-    // PBD: ajusta probabilidad según perfil
     let pbdProb = 0.30;
     if (profile.includes('asma')) pbdProb = 0.55;
     if (profile.includes('EPOC')) pbdProb = 0.25;
@@ -231,7 +223,6 @@ export function renderEvaluacion(root){
     let fvcPost = fvcPre;
 
     if (pbdPos){
-      // cumple ≥12% y ≥0.2 L en al menos uno
       if (Math.random() < 0.65){
         fev1Post = fev1Pre + rand(0.20, 0.55);
       } else {
@@ -244,11 +235,9 @@ export function renderEvaluacion(root){
 
     const sev = (target === 'obstructivo' || target === 'mixto') ? sevFromFev1(fev1Pct) : 'na';
 
-    // Explicaciones
     const whyPattern = buildWhyPattern(target, ratio, fvcPct);
     const whyPbd = buildWhyPbd(pbdPos, fev1Pre, fev1Post, fvcPre, fvcPost);
 
-    // Diagnóstico más probable (no bloqueante): lo define el perfil
     const dxExpected = pick.dx;
     const whyDx = buildWhyDx(dxExpected, profile, target, pbdPos);
 
@@ -301,7 +290,7 @@ export function renderEvaluacion(root){
       return `Perfil sugiere variabilidad. Una PBD ${pbdPos ? 'positiva apoya reversibilidad' : 'no positiva no descarta'}; el diagnóstico final depende de la clínica y evolución.`;
     }
     if (dx === 'epoc'){
-      return `Perfil de fumador/disnea progresiva. La PBD puede ser ${pbdPos ? 'positiva sin convertirlo en asma' : 'no positiva'}; la interpretación se integra con clínica.`;
+      return `Perfil de fumador/disnea progresiva. La PBD puede ser ${pbdPos ? 'positiva sin convertirlo en asma' : 'no positiva'}; integrar con clínica.`;
     }
     if (dx === 'normal'){
       return `Contexto de control/seguimiento. Un patrón ${pattern} podría obligar a ampliar estudio, pero este caso está planteado como “normal/seguimiento”.`;
