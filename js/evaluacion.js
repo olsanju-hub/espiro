@@ -114,7 +114,7 @@ export function renderEvaluacion(root){
       </div>
 
       <div class="small" style="margin-top:10px;">
-        PBD: considera positiva si en FEV1 y FVC hay ≥12% y ≥200 ml frente a basal. (La app no te da el veredicto aquí).
+        PBD: Se considera que la prueba es POSITIVA si aumenta la FVC o el FEV1 ≥10 % respecto del valor teórico (criterio ERS/ATS 20223).
       </div>
     `;
 
