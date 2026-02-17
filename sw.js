@@ -1,19 +1,18 @@
 // sw.js
-/* Service Worker robusto: NO se rompe si falta un asset del CORE */
-const SW_VERSION = 'espiro-v4-2026-02-16';
-const CACHE_NAME = `cache-${SW_VERSION}`;
+// Service Worker "anti-app-vieja": network-first para HTML/JS/CSS/JSON
+const CACHE_NAME = 'espiro-cache-v1';
 
-// IMPORTANTE: que los nombres coincidan EXACTO con tu árbol (case-sensitive en GitHub)
 const CORE = [
   './',
   './index.html',
   './manifest.json',
   './favicon.ico',
+  './discourse.json',
   './css/styles.css',
 
   './js/app.js',
   './js/router.js',
-  './js/routerviews.js',     // <-- CORREGIDO (en tu carpeta está en minúsculas)
+  './js/routerViews.js',
   './js/drawer.js',
   './js/bibliografia.js',
   './js/gallery.js',
@@ -30,38 +29,20 @@ const CORE = [
   './assets/images/pulmon.png',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
-  './assets/icons/icon-1024.png',
-
-  './discourse.json'
+  './assets/icons/icon-1024.png'
 ];
 
-// Cache de slides/tech bajo demanda (no en CORE)
 self.addEventListener('install', (event) => {
   self.skipWaiting();
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-
-    // En vez de addAll (que falla si 1 falta), hacemos fetch uno a uno y toleramos errores
-    const results = await Promise.allSettled(
-      CORE.map(async (path) => {
-        const req = new Request(path, { cache: 'reload' });
-        const res = await fetch(req);
-        if (!res.ok) throw new Error(`CORE fail ${path}: ${res.status}`);
-        await cache.put(req, res);
-      })
-    );
-
-    // Si quieres, puedes loguear fallos (no rompe instalación)
-    // results.filter(r => r.status === 'rejected').forEach(r => console.warn(r.reason));
-  })());
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE))
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(
-      keys.map(k => (k.startsWith('cache-') && k !== CACHE_NAME) ? caches.delete(k) : Promise.resolve())
-    );
+    await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : Promise.resolve())));
     await self.clients.claim();
   })());
 });
@@ -74,25 +55,34 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  event.respondWith((async () => {
-    const url = new URL(req.url);
-    const accept = req.headers.get('accept') || '';
-    const isHTML = accept.includes('text/html') || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
 
-    // 1) HTML: Network-first (evita “app vieja”)
-    if (isHTML) {
+  const dest = req.destination; // 'document' | 'script' | 'style' | 'image' | ...
+  const accept = req.headers.get('accept') || '';
+  const isHTML = dest === 'document' || accept.includes('text/html');
+  const isCritical = isHTML || dest === 'script' || dest === 'style' || url.pathname.endsWith('.json');
+
+  // Network-first para evitar “versión vieja”
+  if (isCritical) {
+    event.respondWith((async () => {
       try {
-        const fresh = await fetch(req);
+        const fresh = await fetch(req, { cache: 'no-store' });
         const cache = await caches.open(CACHE_NAME);
         cache.put(req, fresh.clone());
         return fresh;
-      } catch (_) {
+      } catch (e) {
         const cached = await caches.match(req);
-        return cached || caches.match('./index.html');
+        if (cached) return cached;
+        if (isHTML) return caches.match('./index.html');
+        return new Response('', { status: 504 });
       }
-    }
+    })());
+    return;
+  }
 
-    // 2) Resto: Cache-first + relleno
+  // Cache-first para el resto
+  event.respondWith((async () => {
     const cached = await caches.match(req);
     if (cached) return cached;
 
@@ -101,7 +91,7 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(CACHE_NAME);
       cache.put(req, fresh.clone());
       return fresh;
-    } catch (_) {
+    } catch (e) {
       return new Response('', { status: 504 });
     }
   })());
