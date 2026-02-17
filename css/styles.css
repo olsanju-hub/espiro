@@ -83,20 +83,45 @@ body{
 .drawer-link:active{ transform: translateY(1px); }
 .drawer-foot{ margin-top:auto; color:var(--muted); }
 
-/* Bibliografía tab/panel */
+/* ============================= */
+/* BIBLIOGRAFÍA - TAB LATERAL   */
+/* ============================= */
+
 .biblio-tab{
   position:fixed;
-  right:10px;
-  bottom:18%;
-  z-index:40;
-  height:44px;
-  padding:0 14px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.35);
-  background: rgba(11,42,74,.88);
+  right:0;
+  top:50%;
+  transform: translateY(-50%);
+
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:14px 8px;
+  min-width:44px;
+
+  border-radius:14px 0 0 14px;
+  border:1px solid rgba(0,0,0,.10);
+  border-right:none;
+
+  background: rgba(11,42,74,.92);
   color:#fff;
+
+  font-weight:700;
+  letter-spacing:.5px;
+
   cursor:pointer;
   box-shadow: var(--shadow);
+  z-index:40;
+}
+.biblio-tab:hover,
+.biblio-tab:focus-visible{
+  right:6px;
+  transition: right .18s ease;
+  outline:none;
 }
 .biblio-tab.isHidden{ display:none; }
 
