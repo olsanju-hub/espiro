@@ -1,5 +1,5 @@
 // js/simulador.js
-import { num, escapeHTML } from './utils.js';
+import { num, pctChange, escapeHTML } from './utils.js';
 
 export function renderSimulador(root){
   root.innerHTML = `
@@ -15,42 +15,45 @@ export function renderSimulador(root){
       </div>
 
       <form class="form" id="formSim" style="margin-top:10px;">
-        <!-- ESENCIALES (sin scroll innecesario): todo en % -->
+
+        <!-- ESENCIALES (rápidos, en %) -->
         <div class="card" style="border-radius:16px;">
-          <strong>1) Valores esenciales (% pred / %)</strong>
+          <strong>1) Esenciales</strong>
 
           <div class="row2" style="margin-top:10px;">
             <div class="field">
               <label>FEV1/FVC (%, pre)</label>
-              <input inputmode="decimal" id="ratioPct" placeholder="Ej: 45" />
-              <div class="small">Introduce el porcentaje (no 0,45).</div>
+              <input inputmode="decimal" id="ratioPct" placeholder="Ej: 63" />
+              <div class="small">Introduce porcentaje (63), no 0,63.</div>
             </div>
             <div class="field">
-              <label>FVC % pred (pre)</label>
-              <input inputmode="decimal" id="fvcPctPre" placeholder="Ej: 93" />
+              <label>FEV1 % pred (pre)</label>
+              <input inputmode="decimal" id="fev1PctPre" placeholder="Ej: 58" />
+              <div class="small">Para gravedad (idealmente usar post si lo tienes).</div>
             </div>
           </div>
 
           <div class="row2" style="margin-top:10px;">
             <div class="field">
-              <label>FEV1 % pred (pre)</label>
-              <input inputmode="decimal" id="fev1PctPre" placeholder="Ej: 84" />
-              <div class="small">Si hay obstrucción, se usa para graduar (mejor con valor post si lo tienes).</div>
+              <label>FVC % pred (pre)</label>
+              <input inputmode="decimal" id="fvcPctPre" placeholder="Ej: 74" />
+              <div class="small">Para restricción/mixto (umbral operativo: &lt;80%).</div>
             </div>
             <div class="field">
               <label>FEV1 % pred (post, opcional)</label>
-              <input inputmode="decimal" id="fev1PctPost" placeholder="Ej: 92" />
+              <input inputmode="decimal" id="fev1PctPost" placeholder="Ej: 66" />
+              <div class="small">Si hay obstrucción, se usa para gravedad si lo rellenas.</div>
             </div>
           </div>
 
           <div class="row2" style="margin-top:10px;">
             <div class="field">
               <label>FVC % pred (post, opcional)</label>
-              <input inputmode="decimal" id="fvcPctPost" placeholder="Ej: 101" />
+              <input inputmode="decimal" id="fvcPctPost" placeholder="Ej: 78" />
             </div>
             <div class="field">
-              <label>FVC % pred (pre) ya arriba</label>
-              <div class="small">Dejo esta columna libre para que en móvil quede simétrico.</div>
+              <label>&nbsp;</label>
+              <div class="small">—</div>
             </div>
           </div>
         </div>
@@ -71,73 +74,42 @@ export function renderSimulador(root){
               <input inputmode="decimal" id="llnPct" placeholder="Ej: 68" />
             </div>
           </div>
-          <div class="small">Por defecto: obstrucción si FEV1/FVC &lt; 70%.</div>
+          <div class="small">Por defecto: obstrucción si FEV1/FVC &lt; 70% (como en tu algoritmo visual).</div>
         </div>
 
-        <!-- PBD -->
-        <div class="card" style="border-radius:16px; margin-top:12px;">
-          <strong>3) Prueba broncodilatadora (PBD)</strong>
-          <div class="small" style="margin-top:6px;">
-            Criterio usado (según lo que me has dicho): <strong>positiva si ΔFEV1 o ΔFVC ≥10 puntos porcentuales de % pred</strong>
-            (equivale a ≥10% del predicho).
+        <!-- PBD CLÁSICA (plegada, mínima en litros) -->
+        <details class="card" style="border-radius:16px; margin-top:12px;">
+          <summary><strong>3) PBD (criterio clásico) — desplegable</strong></summary>
+
+          <div class="small" style="margin-top:8px;">
+            Criterio clásico: <strong>positiva si</strong> ΔFEV1 <strong>o</strong> ΔFVC <strong>≥12%</strong> del basal <strong>y</strong> <strong>≥200 ml</strong>.
+            (Para calcularlo bien hacen falta litros.)
           </div>
 
           <div class="row2" style="margin-top:10px;">
             <div class="field">
-              <label>FEV1 % pred (post)</label>
-              <input inputmode="decimal" id="fev1PctPost2" placeholder="Ej: 92" />
-              <div class="small">Si lo rellenas aquí, prevalece sobre el post de arriba.</div>
+              <label>FEV1 pre (L) *</label>
+              <input inputmode="decimal" id="fev1PreL" placeholder="Ej: 1.82" />
             </div>
             <div class="field">
-              <label>FVC % pred (post)</label>
-              <input inputmode="decimal" id="fvcPctPost2" placeholder="Ej: 101" />
-              <div class="small">Si lo rellenas aquí, prevalece sobre el post de arriba.</div>
+              <label>FEV1 post (L) *</label>
+              <input inputmode="decimal" id="fev1PostL" placeholder="Ej: 2.05" />
+            </div>
+          </div>
+
+          <div class="row2" style="margin-top:10px;">
+            <div class="field">
+              <label>FVC pre (L) (opcional)</label>
+              <input inputmode="decimal" id="fvcPreL" placeholder="Ej: 3.40" />
+            </div>
+            <div class="field">
+              <label>FVC post (L) (opcional)</label>
+              <input inputmode="decimal" id="fvcPostL" placeholder="Ej: 3.70" />
             </div>
           </div>
 
           <div class="small" style="margin-top:10px;">
             Nota clínica: PBD positiva <strong>no equivale automáticamente</strong> a asma; integrar con clínica y evolución.
-          </div>
-        </div>
-
-        <!-- OPCIONALES PLEGADOS (LITROS) -->
-        <details class="card" style="border-radius:16px; margin-top:12px;">
-          <summary><strong>Opcional (plegado): introducir litros / predichos en litros</strong></summary>
-          <div class="small" style="margin-top:8px;">
-            Solo si quieres registrar el informe “tal cual” o comprobar coherencias.
-          </div>
-          <div class="row2" style="margin-top:10px;">
-            <div class="field">
-              <label>FEV1 pre (L)</label>
-              <input inputmode="decimal" id="fev1PreL" placeholder="Ej: 1.82" />
-            </div>
-            <div class="field">
-              <label>FVC pre (L)</label>
-              <input inputmode="decimal" id="fvcPreL" placeholder="Ej: 4.02" />
-            </div>
-          </div>
-          <div class="row2" style="margin-top:10px;">
-            <div class="field">
-              <label>FEV1 post (L)</label>
-              <input inputmode="decimal" id="fev1PostL" placeholder="Ej: 1.93" />
-            </div>
-            <div class="field">
-              <label>FVC post (L)</label>
-              <input inputmode="decimal" id="fvcPostL" placeholder="Ej: 4.00" />
-            </div>
-          </div>
-          <div class="row2" style="margin-top:10px;">
-            <div class="field">
-              <label>FEV1 pred (L)</label>
-              <input inputmode="decimal" id="fev1PredL" placeholder="Ej: 2.17" />
-            </div>
-            <div class="field">
-              <label>FVC pred (L)</label>
-              <input inputmode="decimal" id="fvcPredL" placeholder="Ej: 4.32" />
-            </div>
-          </div>
-          <div class="small" style="margin-top:8px;">
-            Si rellenas predichos en litros y los valores en litros, puedo calcular % pred automáticamente.
           </div>
         </details>
 
@@ -166,40 +138,12 @@ export function renderSimulador(root){
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
 
-    // Primario (%)
-    let ratioPct = num(root.querySelector('#ratioPct').value);
-    let fev1PctPre = num(root.querySelector('#fev1PctPre').value);
-    let fvcPctPre  = num(root.querySelector('#fvcPctPre').value);
-
-    // Post (%), dos sitios: si el de PBD está relleno, manda
-    const fev1PctPostA = num(root.querySelector('#fev1PctPost').value);
-    const fvcPctPostA  = num(root.querySelector('#fvcPctPost').value);
-    const fev1PctPostB = num(root.querySelector('#fev1PctPost2').value);
-    const fvcPctPostB  = num(root.querySelector('#fvcPctPost2').value);
-
-    const fev1PctPost = (fev1PctPostB != null) ? fev1PctPostB : fev1PctPostA;
-    const fvcPctPost  = (fvcPctPostB != null) ? fvcPctPostB  : fvcPctPostA;
-
-    // Secundario (L) -> por si el usuario mete solo litros/predichos
-    const fev1PreL  = num(root.querySelector('#fev1PreL').value);
-    const fvcPreL   = num(root.querySelector('#fvcPreL').value);
-    const fev1PostL = num(root.querySelector('#fev1PostL').value);
-    const fvcPostL  = num(root.querySelector('#fvcPostL').value);
-    const fev1PredL = num(root.querySelector('#fev1PredL').value);
-    const fvcPredL  = num(root.querySelector('#fvcPredL').value);
-
-    // Autocompletar % pred si falta y se dieron L+pred(L)
-    if (fev1PctPre == null && fev1PreL != null && fev1PredL != null && fev1PredL > 0){
-      fev1PctPre = (fev1PreL / fev1PredL) * 100;
-    }
-    if (fvcPctPre == null && fvcPreL != null && fvcPredL != null && fvcPredL > 0){
-      fvcPctPre = (fvcPreL / fvcPredL) * 100;
-    }
-
-    // Autocompletar ratio% si falta y se dieron FEV1/FVC en L
-    if (ratioPct == null && fev1PreL != null && fvcPreL != null && fvcPreL > 0){
-      ratioPct = (fev1PreL / fvcPreL) * 100;
-    }
+    // Esenciales (%)
+    const ratioPct = num(root.querySelector('#ratioPct').value);
+    const fev1PctPre = num(root.querySelector('#fev1PctPre').value);
+    const fvcPctPre  = num(root.querySelector('#fvcPctPre').value);
+    const fev1PctPost = num(root.querySelector('#fev1PctPost').value);
+    const fvcPctPost  = num(root.querySelector('#fvcPctPost').value);
 
     if (ratioPct == null || fvcPctPre == null){
       out.className = 'result warn';
@@ -223,7 +167,7 @@ export function renderSimulador(root){
     const isObs = ratioPct < cutoffPct;
     const isLowFvc = (fvcPctPre < 80);
 
-    // Patrón (clásico)
+    // Patrón (clásico operativo)
     let pattern = 'Indeterminado';
     const why = [];
 
@@ -243,7 +187,7 @@ export function renderSimulador(root){
       why.push(`FEV1/FVC ${ratioPct.toFixed(0)}% ≥ ${cutoffPct.toFixed(0)}% y FVC %pred ${fvcPctPre.toFixed(0)}% ≥ 80%`);
     }
 
-    // Gravedad (GOLD clásico, idealmente con FEV1% post si existe)
+    // Gravedad (GOLD clásico, usando FEV1% post si existe; si no, pre)
     const fev1ForSeverity = (fev1PctPost != null) ? fev1PctPost : fev1PctPre;
     let severity = null;
     if (isObs && fev1ForSeverity != null){
@@ -254,20 +198,42 @@ export function renderSimulador(root){
       else severity = 'Muy grave (FEV1 <30% pred)';
     }
 
-    // PBD (Δ%pred >= 10 puntos)
+    // PBD clásica (solo si hay litros mínimos)
+    const fev1PreL  = num(root.querySelector('#fev1PreL').value);
+    const fev1PostL = num(root.querySelector('#fev1PostL').value);
+    const fvcPreL   = num(root.querySelector('#fvcPreL').value);
+    const fvcPostL  = num(root.querySelector('#fvcPostL').value);
+
     let pbd = null;
-    if (fev1PctPre != null && fvcPctPre != null && (fev1PctPost != null || fvcPctPost != null)){
-      const dFev1 = (fev1PctPost != null) ? (fev1PctPost - fev1PctPre) : null;
-      const dFvc  = (fvcPctPost  != null) ? (fvcPctPost  - fvcPctPre)  : null;
 
-      const fev1Ok = (dFev1 != null) ? (dFev1 >= 10) : false;
-      const fvcOk  = (dFvc  != null) ? (dFvc  >= 10) : false;
+    const hasFev1Liters = (fev1PreL != null && fev1PostL != null && fev1PreL > 0);
+    const hasFvcLiters  = (fvcPreL != null && fvcPostL != null && fvcPreL > 0);
 
-      pbd = {
-        positive: fev1Ok || fvcOk,
-        dFev1, dFvc,
-        fev1Ok, fvcOk
-      };
+    if (hasFev1Liters || hasFvcLiters){
+      const parts = [];
+      let positive = false;
+
+      if (hasFev1Liters){
+        const d = fev1PostL - fev1PreL;
+        const pc = pctChange(fev1PostL, fev1PreL); // %
+        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        if (ok) positive = true;
+        parts.push(`FEV1: Δ ${d.toFixed(2)} L · ${pc?.toFixed(1)}% ${ok ? '→ cumple (≥12% y ≥200 ml)' : ''}`);
+      } else {
+        parts.push('FEV1: (faltan litros pre/post para calcular criterio clásico)');
+      }
+
+      if (hasFvcLiters){
+        const d = fvcPostL - fvcPreL;
+        const pc = pctChange(fvcPostL, fvcPreL);
+        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        if (ok) positive = true;
+        parts.push(`FVC: Δ ${d.toFixed(2)} L · ${pc?.toFixed(1)}% ${ok ? '→ cumple (≥12% y ≥200 ml)' : ''}`);
+      } else {
+        parts.push('FVC: (opcional; si no pones litros, solo valoro FEV1)');
+      }
+
+      pbd = { positive, detail: parts.join('<br>') };
     }
 
     const html = `
@@ -291,16 +257,14 @@ export function renderSimulador(root){
       ${severity ? `<div style="margin-top:10px;"><strong>Gravedad obstrucción:</strong> ${escapeHTML(severity)}</div>` : ''}
 
       ${pbd ? `
-        <div style="margin-top:10px;"><strong>PBD:</strong> ${pbd.positive ? 'Positiva' : 'No positiva'} (criterio Δ%pred ≥10 puntos)</div>
-        <div class="small" style="margin-top:6px;">
-          • ΔFEV1: ${pbd.dFev1 != null ? (pbd.dFev1.toFixed(0)+' puntos') : '—'} ${pbd.fev1Ok ? '→ cumple' : ''}<br>
-          • ΔFVC: ${pbd.dFvc != null ? (pbd.dFvc.toFixed(0)+' puntos') : '—'} ${pbd.fvcOk ? '→ cumple' : ''}
+        <div style="margin-top:10px;"><strong>PBD (clásica):</strong> ${pbd.positive ? 'Positiva' : 'No positiva'} (≥12% y ≥200 ml en FEV1 o FVC)</div>
+        <div class="small" style="margin-top:6px;">${pbd.detail}</div>
+        <div class="small" style="margin-top:10px;">Nota: PBD positiva no equivale automáticamente a asma; integrar con clínica y evolución.</div>
+      ` : `
+        <div class="small" style="margin-top:10px;">
+          PBD clásica: si quieres que la app la calcule, abre el desplegable y rellena al menos FEV1 pre/post (L).
         </div>
-      ` : ''}
-
-      <div class="small" style="margin-top:10px;">
-        Nota: PBD positiva no equivale automáticamente a asma; integrar con clínica y evolución.
-      </div>
+      `}
     `;
 
     out.className = 'result';
