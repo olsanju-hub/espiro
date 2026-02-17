@@ -94,7 +94,11 @@ export function renderSimulador(root){
               <input inputmode="decimal" id="fvcPost" placeholder="Ej: 3.55" />
             </div>
           </div>
-          <div class="small">Positiva si ≥12% y ≥200 ml en FEV1 o FVC (vs basal).</div>
+          <div class="small">
+            Criterio usado por la app:
+            si hay valor predicho (L), positiva si ΔFEV1 o ΔFVC ≥10% del predicho;
+            si no hay predicho, usa criterio clásico: Δ≥12% y ≥200 ml vs basal.
+          </div>
         </div>
 
         <div class="action-row" style="margin-top:12px;">
@@ -194,7 +198,7 @@ export function renderSimulador(root){
       else severity = 'Muy grave (FEV1 <30% pred)';
     }
 
-    // PBD
+    // PBD (dos modos: si hay predicho -> % del predicho; si no -> clásico 12%+200 ml)
     const fev1Post = num(root.querySelector('#fev1Post').value);
     const fvcPost  = num(root.querySelector('#fvcPost').value);
 
@@ -203,27 +207,72 @@ export function renderSimulador(root){
       const parts = [];
       let positive = false;
 
+      const hasPredFEV1 = (fev1Pred != null && fev1Pred > 0);
+      const hasPredFVC  = (fvcPred  != null && fvcPred  > 0);
+      const usePredCriterion = hasPredFEV1 || hasPredFVC;
+
       if (fev1Post != null){
         const d = fev1Post - fev1Pre;
-        const pc = pctChange(fev1Post, fev1Pre);
-        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        const pcBasal = pctChange(fev1Post, fev1Pre); // % vs basal
+        const pcPred  = hasPredFEV1 ? (d / fev1Pred * 100) : null; // % del predicho
+
+        let ok = false;
+        let why = '';
+
+        if (usePredCriterion && hasPredFEV1){
+          ok = (pcPred != null && pcPred >= 10);
+          why = `Δ/Pred ${pcPred.toFixed(1)}% ${ok ? '→ cumple (≥10% pred)' : ''}`;
+        } else {
+          ok = (pcBasal != null && pcBasal >= 12) && (d >= 0.2);
+          why = `${pcBasal?.toFixed(1)}% vs basal y +${d.toFixed(2)}L ${ok ? '→ cumple (≥12% y ≥200 ml)' : ''}`;
+        }
+
         if (ok) positive = true;
-        parts.push(`FEV1: +${d.toFixed(2)} L (${pc?.toFixed(1)}%) ${ok ? '→ cumple' : ''}`);
+
+        parts.push(
+          `FEV1: +${d.toFixed(2)} L · ${usePredCriterion && hasPredFEV1
+            ? `${pcPred?.toFixed(1)}% del predicho`
+            : `${pcBasal?.toFixed(1)}% vs basal`
+          } · ${why}`
+        );
       }
 
       if (fvcPost != null){
         const d = fvcPost - fvcPre;
-        const pc = pctChange(fvcPost, fvcPre);
-        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        const pcBasal = pctChange(fvcPost, fvcPre);
+        const pcPred  = hasPredFVC ? (d / fvcPred * 100) : null;
+
+        let ok = false;
+        let why = '';
+
+        if (usePredCriterion && hasPredFVC){
+          ok = (pcPred != null && pcPred >= 10);
+          why = `Δ/Pred ${pcPred.toFixed(1)}% ${ok ? '→ cumple (≥10% pred)' : ''}`;
+        } else {
+          ok = (pcBasal != null && pcBasal >= 12) && (d >= 0.2);
+          why = `${pcBasal?.toFixed(1)}% vs basal y +${d.toFixed(2)}L ${ok ? '→ cumple (≥12% y ≥200 ml)' : ''}`;
+        }
+
         if (ok) positive = true;
-        parts.push(`FVC: +${d.toFixed(2)} L (${pc?.toFixed(1)}%) ${ok ? '→ cumple' : ''}`);
+
+        parts.push(
+          `FVC: +${d.toFixed(2)} L · ${usePredCriterion && hasPredFVC
+            ? `${pcPred?.toFixed(1)}% del predicho`
+            : `${pcBasal?.toFixed(1)}% vs basal`
+          } · ${why}`
+        );
       }
 
-      pbd = { positive, detail: parts.join('<br>') };
+      pbd = {
+        positive,
+        mode: (usePredCriterion ? 'pred' : 'classic'),
+        detail: parts.map(x=>escapeHTML(x)).join('<br>')
+      };
     }
 
     const html = `
       <div style="font-size:18px;"><strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (umbral ${cutoff.toFixed(2)} · ${mode === 'fixed' ? '0,70' : 'LLN'})</div>
+
       <div style="margin-top:10px;"><strong>Patrón:</strong> ${escapeHTML(pattern)}</div>
       <div class="small" style="margin-top:6px;">${patternWhy.map(x=>`• ${escapeHTML(x)}`).join('<br>')}</div>
 
@@ -235,7 +284,10 @@ export function renderSimulador(root){
       ${severity ? `<div style="margin-top:6px;"><strong>Gravedad obstrucción:</strong> ${escapeHTML(severity)}</div>` : ''}
 
       ${pbd ? `
-        <div style="margin-top:10px;"><strong>PBD:</strong> ${pbd.positive ? 'Positiva' : 'No positiva por criterio ≥12% y ≥200 ml'}</div>
+        <div style="margin-top:10px;">
+          <strong>PBD:</strong> ${pbd.positive ? 'Positiva' : 'No positiva'}
+          <span class="small">(${pbd.mode === 'pred' ? 'criterio ≥10% del predicho (si hay pred)' : 'criterio clásico ≥12% y ≥200 ml (sin pred)'} )</span>
+        </div>
         <div class="small" style="margin-top:6px;">${pbd.detail}</div>
       ` : ''}
 
