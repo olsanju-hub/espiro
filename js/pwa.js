@@ -1,57 +1,39 @@
-// js/app.js
-import { Router } from './router.js';
-import { initDrawer } from './drawer.js';
-import { initBibliografia } from './bibliografia.js';
-import { initModal } from './gallery.js';
-import { initPWA } from './pwa.js';
+// js/pwa.js
+export function initPWA() {
+  if (!('serviceWorker' in navigator)) return;
 
-import { renderPortada, renderMenu } from './routerViews.js';
-import { renderTecnica } from './tecnica.js';
-import { renderAlgoritmo } from './algoritmo.js';
-import { renderSimulador } from './simulador.js';
-import { renderEvaluacion } from './evaluacion.js';
-import { initPresentacion } from './presentacion.js';
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
 
-const els = {
-  view: document.getElementById('view'),
-  topbar: document.getElementById('topbar'),
-  drawer: document.getElementById('drawer'),
-  drawerBtn: document.getElementById('drawerBtn'),
-  biblioTab: document.getElementById('biblioTab'),
-};
+      // Pide update al entrar (sin que el usuario haga hard refresh)
+      try { await reg.update(); } catch (_) {}
 
-const router = new Router({
-  onRoute: (route) => {
-    // Vistas “sin chrome”
-    const noChrome = (route === 'portada' || route === 'menu' || route === 'presentacion');
-    els.topbar.setAttribute('aria-hidden', noChrome ? 'true' : 'false');
-    els.biblioTab.classList.toggle('isHidden', noChrome);
+      // Si encuentra SW nuevo, lo activa y recarga
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
 
-    // Drawer solo en internas
-    if (noChrome) {
-      els.drawer.classList.remove('isOpen');
-      els.drawer.setAttribute('aria-hidden', 'true');
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed') {
+            // Si ya había controller -> hay update
+            if (navigator.serviceWorker.controller) {
+              try { sw.postMessage({ type: 'SKIP_WAITING' }); } catch (_) {}
+            }
+          }
+        });
+      });
+
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+
+    } catch (e) {
+      // si falla, no rompe la app
+      console.warn('PWA init error', e);
     }
-
-    // Render
-    els.view.innerHTML = '';
-    switch(route){
-      case 'portada': renderPortada(els.view, router); break;
-      case 'menu': renderMenu(els.view, router); break;
-      case 'tecnica': renderTecnica(els.view); break;
-      case 'algoritmo': renderAlgoritmo(els.view); break;
-      case 'simulador': renderSimulador(els.view); break;
-      case 'evaluacion': renderEvaluacion(els.view); break;
-      case 'presentacion': /* se abre desde presentacion.js */ break;
-      default: router.go('portada'); return;
-    }
-  }
-});
-
-initDrawer(router);
-initBibliografia(router);
-initModal();
-initPresentacion(router);
-initPWA();
-
-router.start();
+  });
+}
