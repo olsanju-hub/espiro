@@ -114,7 +114,7 @@ export function renderEvaluacion(root){
       </div>
 
       <div class="small" style="margin-top:10px;">
-        PBD: Se considera que la prueba es POSITIVA si aumenta la FVC o el FEV1 ≥10 % respecto del valor teórico (criterio ERS/ATS 20223).
+        PBD: Se considera que la prueba es POSITIVA si aumenta la FVC o el FEV1 ≥10 % respecto del valor teórico (criterio ERS/ATS 2023).
       </div>
     `;
 
