@@ -1,11 +1,11 @@
 // js/evaluacion.js
-import { escapeHTML } from './utils.js';
+import { clamp, escapeHTML } from './utils.js';
 
 export function renderEvaluacion(root){
   root.innerHTML = `
     <div class="section-title">
       <h2>Evaluación</h2>
-      <span class="badge">Casos infinitos</span>
+      <span class="badge">Casos</span>
     </div>
     <div class="hrline"></div>
 
@@ -15,17 +15,16 @@ export function renderEvaluacion(root){
       </div>
 
       <div class="card" style="margin-top:12px;">
-        <h3>Datos</h3>
+        <h3>Datos del caso</h3>
         <div id="caseBox" class="result warn">Pulsa “Nuevo caso”.</div>
       </div>
 
       <div class="card" style="margin-top:12px;">
-        <h3>Tu respuesta (orden del algoritmo)</h3>
+        <h3>Tu respuesta</h3>
 
-        <!-- Resumen horizontal en 3 columnas -->
-        <div class="eval-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+        <div class="row2">
           <div class="field">
-            <label>1) Patrón</label>
+            <label>Patrón</label>
             <select id="ansPattern">
               <option value="normal">Normal</option>
               <option value="obstructivo">Obstructivo</option>
@@ -33,28 +32,27 @@ export function renderEvaluacion(root){
               <option value="mixto">Mixto</option>
             </select>
           </div>
-
           <div class="field">
-            <label>2) PBD</label>
+            <label>PBD</label>
             <select id="ansPbd">
               <option value="pos">Positiva</option>
               <option value="neg">No positiva</option>
             </select>
           </div>
-
-          <div class="field">
-            <label>3) Gravedad (si obstructivo/mixto)</label>
-            <select id="ansSev">
-              <option value="na">No aplica / no sé</option>
-              <option value="leve">Leve</option>
-              <option value="moderada">Moderada</option>
-              <option value="grave">Grave</option>
-              <option value="muygrave">Muy grave</option>
-            </select>
-          </div>
         </div>
 
-        <div class="action-row" style="margin-top:12px;">
+        <div class="field">
+          <label>Gravedad (si obstructivo/mixto)</label>
+          <select id="ansSev">
+            <option value="na">No aplica / no sé</option>
+            <option value="leve">Leve</option>
+            <option value="moderada">Moderada</option>
+            <option value="grave">Grave</option>
+            <option value="muygrave">Muy grave</option>
+          </select>
+        </div>
+
+        <div class="action-row">
           <button class="btn" type="button" id="check">Corregir</button>
         </div>
 
@@ -70,26 +68,41 @@ export function renderEvaluacion(root){
 
   root.querySelector('#newCase').addEventListener('click', ()=>{
     current = genCase();
+    const ratio = current.fev1Pre / current.fvcPre;
 
     caseBox.className = 'result';
     caseBox.innerHTML = `
-      <div><strong>FEV1 pre:</strong> ${current.fev1Pre.toFixed(2)} L</div>
-      <div><strong>FVC pre:</strong> ${current.fvcPre.toFixed(2)} L</div>
-      <div><strong>FEV1/FVC pre:</strong> ${current.ratioPre.toFixed(2)} (umbral 0,70)</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <div><strong>Edad:</strong> ${current.age} años</div>
+          <div><strong>Sexo:</strong> ${escapeHTML(current.sex)}</div>
+          <div><strong>Talla:</strong> ${current.height} cm</div>
+          <div><strong>Peso:</strong> ${current.weight} kg</div>
+        </div>
+        <div>
+          <div><strong>Síntomas:</strong> ${escapeHTML(current.symptoms)}</div>
+          <div><strong>Perfil clínico:</strong> ${escapeHTML(current.profile)}</div>
+          <div class="small" style="margin-top:6px;">(No es bloqueante: solo contextualiza)</div>
+        </div>
+      </div>
 
-      <div style="margin-top:8px;"><strong>FEV1 post:</strong> ${current.fev1Post.toFixed(2)} L</div>
-      <div><strong>FVC post:</strong> ${current.fvcPost.toFixed(2)} L</div>
-      <div><strong>FEV1/FVC post:</strong> ${current.ratioPost.toFixed(2)}</div>
+      <div class="hrline" style="margin:12px 0;"></div>
 
-      <div style="margin-top:8px;"><strong>FEV1% pred (pre):</strong> ${current.fev1PctPre.toFixed(0)}%</div>
-      ${current.fev1PctPost != null
-        ? `<div><strong>FEV1% pred (post):</strong> ${current.fev1PctPost.toFixed(0)}%</div>`
-        : `<div class="small">FEV1% pred post: no disponible en este caso.</div>`
-      }
-      <div><strong>FVC% pred:</strong> ${current.fvcPct.toFixed(0)}%</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div>
+          <div><strong>FEV1 pre:</strong> ${current.fev1Pre.toFixed(2)} L</div>
+          <div><strong>FVC pre:</strong> ${current.fvcPre.toFixed(2)} L</div>
+          <div><strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (umbral 0,70)</div>
+        </div>
+        <div>
+          <div><strong>FEV1 % pred:</strong> ${current.fev1Pct.toFixed(0)}%</div>
+          <div><strong>FVC % pred:</strong> ${current.fvcPct.toFixed(0)}%</div>
+          <div><strong>PBD:</strong> ${current.pbdPos ? 'Positiva' : 'No positiva'}</div>
+        </div>
+      </div>
 
-      <div class="small" style="margin-top:8px;">
-        PBD positiva si Δ ≥12% y ≥200 ml (FEV1 o FVC). Patrones por FEV1/FVC 0,70 y FVC%pred 80.
+      <div class="small" style="margin-top:10px;">
+        PBD por criterio ≥12% y ≥200 ml (en FEV1 o FVC). Umbral de obstrucción: FEV1/FVC &lt; 0,70 (modo evaluación).
       </div>
     `;
 
@@ -108,79 +121,154 @@ export function renderEvaluacion(root){
     const ansPbd = root.querySelector('#ansPbd').value;
     const ansSev = root.querySelector('#ansSev').value;
 
-    const okPattern = ansPattern === current.pattern;
-    const okPbd = ansPbd === (current.pbdPos ? 'pos' : 'neg');
-
-    const needsSev = (current.pattern === 'obstructivo' || current.pattern === 'mixto');
-    const okSev = !needsSev ? true : (ansSev === current.sev || ansSev === 'na');
-
-    // Explicaciones breves (2–3 líneas)
-    const patternExplain = explainPattern(current);
-    const pbdExplain = explainPbd(current);
-    const sevExplain = explainSeverity(current);
-
-    // Resumen correcto en una sola línea + detalle
-    const correctLine = `Correcto: ${current.pattern} · ${current.pbdPos ? 'PBD positiva' : 'PBD no positiva'} · ${needsSev ? current.sev : '—'}`;
+    const ok1 = ansPattern === current.pattern;
+    const ok2 = ansPbd === (current.pbdPos ? 'pos' : 'neg');
+    const ok3 = (current.pattern === 'obstructivo' || current.pattern === 'mixto')
+      ? (ansSev === current.sev || ansSev === 'na')
+      : true;
 
     feedback.className = 'result';
     feedback.innerHTML = `
-      <div><strong>${escapeHTML(correctLine)}</strong></div>
+      <div><strong>Patrón:</strong> ${ok1 ? '✅' : '❌'} (correcto: ${escapeHTML(current.pattern)})</div>
+      <div class="small">${escapeHTML(current.whyPattern)}</div>
 
-      <div style="margin-top:10px;"><strong>1) Patrón:</strong> ${okPattern ? '✅' : '❌'} (correcto: ${current.pattern})</div>
-      <div class="small" style="margin-top:4px;">${escapeHTML(patternExplain)}</div>
+      <div style="margin-top:8px;"><strong>PBD:</strong> ${ok2 ? '✅' : '❌'} (correcto: ${current.pbdPos ? 'pos' : 'neg'})</div>
+      <div class="small">${escapeHTML(current.whyPbd)}</div>
 
-      <div style="margin-top:10px;"><strong>2) PBD:</strong> ${okPbd ? '✅' : '❌'} (correcto: ${current.pbdPos ? 'pos' : 'neg'})</div>
-      <div class="small" style="margin-top:4px;">${escapeHTML(pbdExplain)}</div>
-
-      <div style="margin-top:10px;"><strong>3) Gravedad:</strong> ${okSev ? '✅' : '❌'} (correcto: ${needsSev ? current.sev : 'na'})</div>
-      <div class="small" style="margin-top:4px;">${escapeHTML(sevExplain)}</div>
-
-      <div class="small" style="margin-top:10px;">
-        Nota: una PBD positiva no equivale automáticamente a diagnóstico de asma; integrar con clínica.
-      </div>
+      <div style="margin-top:8px;"><strong>Gravedad:</strong> ${ok3 ? '✅' : '❌'} (correcto: ${escapeHTML(current.sev)})</div>
+      <div class="small">Nota: si marcas “No aplica / no sé” en gravedad, no penaliza.</div>
     `;
   });
 
-  // --------- Explicaciones ----------
-  function explainPattern(c){
-    if (c.pattern === 'obstructivo'){
-      return `FEV1/FVC pre ${c.ratioPre.toFixed(2)} < 0,70 → obstrucción. FVC%pred ${c.fvcPct.toFixed(0)} ≥80 (no sugiere restricción por este criterio).`;
+  function genCase(){
+    // Demografía
+    const age = Math.floor(rand(18, 86)); // 18-85
+    const sex = Math.random() < 0.5 ? 'Varón' : 'Mujer';
+    const height = Math.floor(rand(150, 196));
+    const weight = 80; // fijo, como pediste
+
+    // Perfil clínico (no bloqueante)
+    const profiles = [
+      { name: 'Sospecha asma (variabilidad)', symptoms: 'Tos + sibilancias episódicas, empeora con ejercicio/frío' },
+      { name: 'Sospecha EPOC', symptoms: 'Disnea progresiva + tos crónica, fumador' },
+      { name: 'Disnea de causa no aclarada', symptoms: 'Disnea de esfuerzo + fatiga, sin sibilancias claras' },
+      { name: 'Control/seguimiento', symptoms: 'Asintomático o síntomas leves, revisión' }
+    ];
+    const pick = profiles[Math.floor(Math.random()*profiles.length)];
+    const profile = pick.name;
+    const symptoms = pick.symptoms;
+
+    // Generación de espirometría (coherente con patrón)
+    const fvcPre = rand(2.4, 5.0);
+
+    // Decide patrón objetivo
+    const roll = Math.random();
+    let target = 'obstructivo';
+    if (roll < 0.25) target = 'normal';
+    else if (roll < 0.55) target = 'obstructivo';
+    else if (roll < 0.75) target = 'restrictivo';
+    else target = 'mixto';
+
+    // Ratio y %pred
+    let ratio = 0.78;
+    let fvcPct = 92;
+    let fev1Pct = 88;
+
+    if (target === 'normal'){
+      ratio = rand(0.70, 0.90);
+      fvcPct = rand(80, 110);
+      fev1Pct = rand(80, 115);
     }
-    if (c.pattern === 'mixto'){
-      return `FEV1/FVC pre ${c.ratioPre.toFixed(2)} < 0,70 (obstrucción) y FVC%pred ${c.fvcPct.toFixed(0)} <80 → mixto (confirmar restricción real con volúmenes si procede).`;
+
+    if (target === 'obstructivo'){
+      ratio = rand(0.35, 0.68);
+      fvcPct = rand(80, 110); // no baja (para no ser mixto)
+      fev1Pct = rand(25, 85);
     }
-    if (c.pattern === 'restrictivo'){
-      return `FEV1/FVC pre ${c.ratioPre.toFixed(2)} ≥ 0,70 (sin obstrucción) y FVC%pred ${c.fvcPct.toFixed(0)} <80 → sugestivo de restricción (confirmar con TLC/volúmenes).`;
+
+    if (target === 'restrictivo'){
+      ratio = rand(0.70, 0.90);
+      fvcPct = rand(55, 79);
+      fev1Pct = rand(60, 110);
     }
-    return `FEV1/FVC pre ${c.ratioPre.toFixed(2)} ≥ 0,70 y FVC%pred ${c.fvcPct.toFixed(0)} ≥80 → patrón normal por estos parámetros.`;
+
+    if (target === 'mixto'){
+      ratio = rand(0.35, 0.68);
+      fvcPct = rand(55, 79);
+      fev1Pct = rand(25, 85);
+    }
+
+    const fev1Pre = fvcPre * ratio;
+
+    // PBD: ajusta probabilidad según perfil
+    let pbdProb = 0.30;
+    if (profile.includes('asma')) pbdProb = 0.55;
+    if (profile.includes('EPOC')) pbdProb = 0.25;
+
+    const pbdPos = Math.random() < pbdProb;
+
+    let fev1Post = fev1Pre;
+    let fvcPost = fvcPre;
+
+    if (pbdPos){
+      // cumple ≥12% y ≥0.2 L en al menos uno
+      if (Math.random() < 0.65){
+        fev1Post = fev1Pre + rand(0.20, 0.55);
+      } else {
+        fvcPost = fvcPre + rand(0.20, 0.55);
+      }
+    } else {
+      fev1Post = Math.min(fev1Pre + rand(-0.05, 0.15), fev1Pre + 0.18);
+      fvcPost  = Math.min(fvcPre + rand(-0.05, 0.15), fvcPre + 0.18);
+    }
+
+    const sev = (target === 'obstructivo' || target === 'mixto') ? sevFromFev1(fev1Pct) : 'na';
+
+    // Explicaciones (para “por qué” sin bloquear)
+    const whyPattern = buildWhyPattern(target, ratio, fvcPct);
+    const whyPbd = buildWhyPbd(pbdPos, fev1Pre, fev1Post, fvcPre, fvcPost);
+
+    return {
+      age, sex, height, weight,
+      symptoms, profile,
+      fev1Pre, fvcPre, fev1Post, fvcPost,
+      fev1Pct, fvcPct,
+      pattern: target,
+      pbdPos,
+      sev,
+      whyPattern,
+      whyPbd
+    };
   }
 
-  function explainPbd(c){
-    const fev1 = deltaInfo(c.fev1Pre, c.fev1Post);
-    const fvc  = deltaInfo(c.fvcPre, c.fvcPost);
-
-    const fev1Ok = meetsPbd(fev1);
-    const fvcOk  = meetsPbd(fvc);
-
-    const parts = [];
-    parts.push(`ΔFEV1 ${fmtDelta(fev1)}${fev1Ok ? ' (cumple)' : ''}`);
-    parts.push(`ΔFVC ${fmtDelta(fvc)}${fvcOk ? ' (cumple)' : ''}`);
-
-    return c.pbdPos
-      ? `${parts.join(' · ')} → PBD positiva (≥12% y ≥200 ml en FEV1 o FVC).`
-      : `${parts.join(' · ')} → no cumple criterio de positividad.`;
-  }
-
-  function explainSeverity(c){
-    if (!(c.pattern === 'obstructivo' || c.pattern === 'mixto')) return 'No aplica (no hay patrón obstructivo por criterio).';
-
-    if (c.fev1PctPost != null){
-      return `Se usa FEV1% pred post (disponible): ${c.fev1PctPost.toFixed(0)}% → ${c.sev}.`;
+  function buildWhyPattern(target, ratio, fvcPct){
+    if (target === 'obstructivo'){
+      return `FEV1/FVC ${ratio.toFixed(2)} < 0,70 ⇒ obstrucción. FVC% pred ${Math.round(fvcPct)} ≥80 ⇒ no sugiere restricción.`;
     }
-    return `No hay FEV1% pred post; se usa FEV1% pred pre: ${c.fev1PctPre.toFixed(0)}% → ${c.sev} (orientativo).`;
+    if (target === 'mixto'){
+      return `FEV1/FVC ${ratio.toFixed(2)} < 0,70 + FVC% pred ${Math.round(fvcPct)} <80 ⇒ mixto (confirmar restricción con volúmenes si procede).`;
+    }
+    if (target === 'restrictivo'){
+      return `FEV1/FVC ${ratio.toFixed(2)} ≥ 0,70 + FVC% pred ${Math.round(fvcPct)} <80 ⇒ sugerente de restricción (confirmar con TLC/volúmenes).`;
+    }
+    return `FEV1/FVC ${ratio.toFixed(2)} ≥ 0,70 y FVC% pred ${Math.round(fvcPct)} ≥80 ⇒ patrón normal con estos parámetros (si clínica manda, seguir estudiando).`;
   }
 
-  // --------- Utilidades ----------
+  function buildWhyPbd(pbdPos, fev1Pre, fev1Post, fvcPre, fvcPost){
+    const dFev1 = fev1Post - fev1Pre;
+    const dFvc  = fvcPost - fvcPre;
+    const pcFev1 = (fev1Pre > 0) ? (dFev1/fev1Pre*100) : 0;
+    const pcFvc  = (fvcPre > 0) ? (dFvc/fvcPre*100) : 0;
+
+    const fev1Ok = (pcFev1 >= 12) && (dFev1 >= 0.2);
+    const fvcOk  = (pcFvc  >= 12) && (dFvc  >= 0.2);
+
+    if (pbdPos){
+      return `Cumple criterio en ${fev1Ok ? 'FEV1' : 'FVC'} (≥12% y ≥200 ml). (FEV1 +${dFev1.toFixed(2)}L ${pcFev1.toFixed(0)}% · FVC +${dFvc.toFixed(2)}L ${pcFvc.toFixed(0)}%).`;
+    }
+    return `No cumple ≥12% y ≥200 ml (FEV1 +${dFev1.toFixed(2)}L ${pcFev1.toFixed(0)}% · FVC +${dFvc.toFixed(2)}L ${pcFvc.toFixed(0)}%).`;
+  }
+
   function sevFromFev1(p){
     if (p >= 80) return 'leve';
     if (p >= 50) return 'moderada';
@@ -188,120 +276,5 @@ export function renderEvaluacion(root){
     return 'muygrave';
   }
 
-  function deltaInfo(pre, post){
-    const d = post - pre;
-    const pct = pre > 0 ? (d / pre) * 100 : null;
-    return { d, pct };
-  }
-
-  function meetsPbd(x){
-    return (x.d >= 0.20) && (x.pct != null && x.pct >= 12);
-  }
-
-  function fmtDelta(x){
-    const d = `${x.d>=0?'+':''}${x.d.toFixed(2)} L`;
-    const p = x.pct == null ? '—' : `${x.pct.toFixed(0)}%`;
-    return `${d} (${p})`;
-  }
-
-  function clamp(x, a, b){
-    return Math.max(a, Math.min(b, x));
-  }
-
-  // --------- Generador de casos (coherente, pero “infinito”) ----------
-  function genCase(){
-    // Volúmenes pre
-    const fvcPre = rand(2.4, 5.0);
-
-    // Distribución equilibrada de patrones 25% cada uno
-    const r = Math.random();
-    let forced = 'normal';
-    if (r < 0.25) forced = 'normal';
-    else if (r < 0.50) forced = 'obstructivo';
-    else if (r < 0.75) forced = 'restrictivo';
-    else forced = 'mixto';
-
-    // ratio y %pred según patrón
-    let ratioPre;
-    let fvcPct;
-
-    if (forced === 'obstructivo'){
-      ratioPre = rand(0.35, 0.68);
-      fvcPct = rand(80, 110);
-    } else if (forced === 'restrictivo'){
-      ratioPre = rand(0.70, 0.90);
-      fvcPct = rand(55, 79);
-    } else if (forced === 'mixto'){
-      ratioPre = rand(0.35, 0.68);
-      fvcPct = rand(55, 79);
-    } else { // normal
-      ratioPre = rand(0.70, 0.90);
-      fvcPct = rand(80, 110);
-    }
-
-    const fev1Pre = fvcPre * ratioPre;
-
-    // FEV1% pred pre (coherente con patrón)
-    let fev1PctPre;
-    if (forced === 'obstructivo' || forced === 'mixto'){
-      fev1PctPre = rand(25, 85);
-    } else {
-      fev1PctPre = rand(80, 115);
-    }
-
-    // PBD: proporción moderada; generar post y calcular positividad real
-    const wantPos = Math.random() < 0.35;
-
-    let fev1Post = fev1Pre;
-    let fvcPost  = fvcPre;
-
-    if (wantPos){
-      const target = Math.random() < 0.6 ? 'fev1' : 'fvc';
-      if (target === 'fev1'){
-        const minDelta = Math.max(0.20, 0.12 * fev1Pre);
-        fev1Post = fev1Pre + rand(minDelta, minDelta + 0.35);
-        fvcPost  = fvcPre + rand(-0.03, 0.08);
-      } else {
-        const minDelta = Math.max(0.20, 0.12 * fvcPre);
-        fvcPost  = fvcPre + rand(minDelta, minDelta + 0.35);
-        fev1Post = fev1Pre + rand(-0.03, 0.08);
-      }
-    } else {
-      fev1Post = fev1Pre + rand(-0.05, 0.15);
-      fvcPost  = fvcPre  + rand(-0.05, 0.15);
-
-      // evitar positividad accidental
-      if (meetsPbd(deltaInfo(fev1Pre, fev1Post))){
-        fev1Post = Math.min(fev1Post, fev1Pre + 0.19);
-      }
-      if (meetsPbd(deltaInfo(fvcPre, fvcPost))){
-        fvcPost = Math.min(fvcPost, fvcPre + 0.19);
-      }
-    }
-
-    const ratioPost = fev1Post / fvcPost;
-    const pbdPos = meetsPbd(deltaInfo(fev1Pre, fev1Post)) || meetsPbd(deltaInfo(fvcPre, fvcPost));
-
-    // FEV1% post: a veces disponible (soporta ambos)
-    const hasPostPct = Math.random() < 0.55;
-    const fev1PctPost = hasPostPct ? clamp(fev1PctPre + rand(-5, +12), 15, 130) : null;
-
-    // severidad usando post si existe, si no pre
-    const sevBasis = (fev1PctPost != null) ? fev1PctPost : fev1PctPre;
-    const sev = (forced === 'obstructivo' || forced === 'mixto') ? sevFromFev1(sevBasis) : 'na';
-
-    return {
-      fev1Pre, fvcPre, fev1Post, fvcPost,
-      ratioPre, ratioPost,
-      fev1PctPre, fev1PctPost,
-      fvcPct,
-      pattern: forced,
-      pbdPos,
-      sev
-    };
-  }
-
-  function rand(a,b){
-    return a + Math.random()*(b-a);
-  }
+  function rand(a,b){ return a + Math.random()*(b-a); }
 }
