@@ -18,7 +18,7 @@ export function renderEvaluacion(root){
         <h3>Datos del caso</h3>
         <div id="caseBox" class="result warn">Pulsa “Nuevo caso”.</div>
         <div class="small" style="margin-top:10px;">
-          PBD (criterio usado aquí): positiva si ΔFEV1 o ΔFVC ≥10% del valor teórico/predicho.
+          PBD (criterio clásico): positiva si ΔFEV1 o ΔFVC ≥12% del basal Y ≥200 ml.
           (No se muestra el veredicto: debes calcularlo tú.)
         </div>
       </div>
@@ -86,7 +86,6 @@ export function renderEvaluacion(root){
         <div>
           <div><strong>Síntomas:</strong> ${escapeHTML(current.symptoms)}</div>
           <div><strong>Perfil clínico:</strong> ${escapeHTML(current.profile)}</div>
-          <div class="small" style="margin-top:6px;">(No es bloqueante: solo contextualiza)</div>
         </div>
       </div>
 
@@ -112,7 +111,7 @@ export function renderEvaluacion(root){
           <div><strong>FVC post:</strong> ${current.fvcPost.toFixed(2)} L</div>
         </div>
         <div class="small">
-          PBD: calcula ΔFEV1 y ΔFVC y compáralo con el 10% del valor teórico (predicho).
+          Calcula Δ en litros y porcentaje respecto al basal.
         </div>
       </div>
     `;
@@ -147,146 +146,98 @@ export function renderEvaluacion(root){
       <div class="small">${escapeHTML(current.whyPbd)}</div>
 
       <div style="margin-top:8px;"><strong>Gravedad:</strong> ${ok3 ? '✅' : '❌'} (correcto: ${escapeHTML(current.sev)})</div>
-      <div class="small">Nota: si marcas “No aplica / no sé” en gravedad, no penaliza.</div>
     `;
   });
 
   function genCase(){
-    // Demografía
     const age = Math.floor(rand(18, 86));
     const sex = Math.random() < 0.5 ? 'Varón' : 'Mujer';
     const height = Math.floor(rand(150, 196));
     const weight = 80;
 
-    // Perfil clínico (no bloqueante)
     const profiles = [
-      { name: 'Sospecha asma (variabilidad)', symptoms: 'Tos + sibilancias episódicas, empeora con ejercicio/frío' },
-      { name: 'Sospecha EPOC', symptoms: 'Disnea progresiva + tos crónica, fumador' },
-      { name: 'Disnea de causa no aclarada', symptoms: 'Disnea de esfuerzo + fatiga, sin sibilancias claras' },
-      { name: 'Control/seguimiento', symptoms: 'Asintomático o síntomas leves, revisión' }
+      { name: 'Sospecha asma', symptoms: 'Tos y sibilancias episódicas' },
+      { name: 'Sospecha EPOC', symptoms: 'Disnea progresiva y tabaquismo' },
+      { name: 'Disnea no aclarada', symptoms: 'Disnea de esfuerzo' },
+      { name: 'Control', symptoms: 'Revisión sin síntomas relevantes' }
     ];
     const pick = profiles[Math.floor(Math.random()*profiles.length)];
-    const profile = pick.name;
-    const symptoms = pick.symptoms;
 
-    // Generación base
     const fvcPre = rand(2.4, 5.0);
 
-    // Decide patrón objetivo
     const roll = Math.random();
-    let target = 'obstructivo';
-    if (roll < 0.25) target = 'normal';
-    else if (roll < 0.55) target = 'obstructivo';
-    else if (roll < 0.75) target = 'restrictivo';
-    else target = 'mixto';
+    let target = roll < 0.25 ? 'normal'
+      : roll < 0.55 ? 'obstructivo'
+      : roll < 0.75 ? 'restrictivo'
+      : 'mixto';
 
-    let ratio = 0.78;
-    let fvcPct = 92;
-    let fev1Pct = 88;
+    let ratio = target === 'obstructivo' || target === 'mixto'
+      ? rand(0.35, 0.68)
+      : rand(0.70, 0.90);
 
-    if (target === 'normal'){
-      ratio = rand(0.70, 0.90);
-      fvcPct = rand(80, 110);
-      fev1Pct = rand(80, 115);
-    }
-    if (target === 'obstructivo'){
-      ratio = rand(0.35, 0.68);
-      fvcPct = rand(80, 110);
-      fev1Pct = rand(25, 85);
-    }
-    if (target === 'restrictivo'){
-      ratio = rand(0.70, 0.90);
-      fvcPct = rand(55, 79);
-      fev1Pct = rand(60, 110);
-    }
-    if (target === 'mixto'){
-      ratio = rand(0.35, 0.68);
-      fvcPct = rand(55, 79);
-      fev1Pct = rand(25, 85);
-    }
+    let fvcPct = target === 'restrictivo' || target === 'mixto'
+      ? rand(55,79)
+      : rand(80,110);
+
+    let fev1Pct = target === 'obstructivo' || target === 'mixto'
+      ? rand(25,85)
+      : rand(80,115);
 
     const fev1Pre = fvcPre * ratio;
 
-    // Derivar predichos desde % (para poder aplicar criterio ≥10% predicho)
-    const fev1Pred = fev1Pre / (fev1Pct/100);
-    const fvcPred  = fvcPre  / (fvcPct/100);
-
-    // Probabilidad de PBD según perfil
-    let pbdProb = 0.30;
-    if (profile.includes('asma')) pbdProb = 0.55;
-    if (profile.includes('EPOC')) pbdProb = 0.25;
-
-    // Genera post
     let fev1Post = fev1Pre;
     let fvcPost = fvcPre;
 
-    const wantPos = Math.random() < pbdProb;
+    const wantPos = Math.random() < 0.35;
 
     if (wantPos){
-      // Asegurar que cumple ≥10% del predicho en FEV1 o FVC
-      if (Math.random() < 0.65){
-        fev1Post = fev1Pre + rand(0.10*fev1Pred, 0.18*fev1Pred);
-        fvcPost  = fvcPre  + rand(-0.03, 0.08);
+      if (Math.random() < 0.6){
+        fev1Post = fev1Pre + rand(0.20,0.60);
       } else {
-        fvcPost  = fvcPre  + rand(0.10*fvcPred, 0.18*fvcPred);
-        fev1Post = fev1Pre + rand(-0.03, 0.08);
+        fvcPost = fvcPre + rand(0.20,0.60);
       }
     } else {
-      // No cumple
-      fev1Post = fev1Pre + rand(-0.05, 0.08*fev1Pred);
-      fvcPost  = fvcPre  + rand(-0.05, 0.08*fvcPred);
+      fev1Post = fev1Pre + rand(-0.05,0.18);
+      fvcPost = fvcPre + rand(-0.05,0.18);
     }
 
     const dFev1 = fev1Post - fev1Pre;
-    const dFvc  = fvcPost  - fvcPre;
-    const pbdPos = (dFev1 >= 0.10*fev1Pred) || (dFvc >= 0.10*fvcPred);
+    const dFvc = fvcPost - fvcPre;
 
-    const sev = (target === 'obstructivo' || target === 'mixto') ? sevFromFev1(fev1Pct) : 'na';
+    const pcFev1 = (dFev1 / fev1Pre) * 100;
+    const pcFvc = (dFvc / fvcPre) * 100;
 
-    const whyPattern = buildWhyPattern(target, ratio, fvcPct);
-    const whyPbd = buildWhyPbd(pbdPos, dFev1, dFvc, fev1Pred, fvcPred);
+    const fev1Ok = pcFev1 >= 12 && dFev1 >= 0.2;
+    const fvcOk = pcFvc >= 12 && dFvc >= 0.2;
+
+    const pbdPos = fev1Ok || fvcOk;
+
+    const sev = (target === 'obstructivo' || target === 'mixto')
+      ? (fev1Pct >= 80 ? 'leve'
+        : fev1Pct >= 50 ? 'moderada'
+        : fev1Pct >= 30 ? 'grave'
+        : 'muygrave')
+      : 'na';
 
     return {
-      age, sex, height, weight,
-      symptoms, profile,
-      fev1Pre, fvcPre, fev1Post, fvcPost,
-      fev1Pct, fvcPct,
-      fev1Pred, fvcPred,
+      age,
+      sex,
+      height,
+      weight,
+      symptoms: pick.symptoms,
+      profile: pick.name,
+      fev1Pre,
+      fvcPre,
+      fev1Post,
+      fvcPost,
+      fev1Pct,
+      fvcPct,
       pattern: target,
       pbdPos,
       sev,
-      whyPattern,
-      whyPbd
+      whyPattern: '',
+      whyPbd: `ΔFEV1 ${dFev1.toFixed(2)}L (${pcFev1.toFixed(0)}%) · ΔFVC ${dFvc.toFixed(2)}L (${pcFvc.toFixed(0)}%).`
     };
-  }
-
-  function buildWhyPattern(target, ratio, fvcPct){
-    if (target === 'obstructivo'){
-      return `FEV1/FVC ${ratio.toFixed(2)} < 0,70 ⇒ obstrucción. FVC% pred ${Math.round(fvcPct)} ≥80 ⇒ no sugiere restricción.`;
-    }
-    if (target === 'mixto'){
-      return `FEV1/FVC ${ratio.toFixed(2)} < 0,70 + FVC% pred ${Math.round(fvcPct)} <80 ⇒ mixto (confirmar restricción con volúmenes si procede).`;
-    }
-    if (target === 'restrictivo'){
-      return `FEV1/FVC ${ratio.toFixed(2)} ≥ 0,70 + FVC% pred ${Math.round(fvcPct)} <80 ⇒ sugerente de restricción (confirmar con TLC/volúmenes).`;
-    }
-    return `FEV1/FVC ${ratio.toFixed(2)} ≥ 0,70 y FVC% pred ${Math.round(fvcPct)} ≥80 ⇒ patrón normal con estos parámetros (si clínica manda, seguir estudiando).`;
-  }
-
-  function buildWhyPbd(pbdPos, dFev1, dFvc, fev1Pred, fvcPred){
-    const fev1Ok = dFev1 >= 0.10*fev1Pred;
-    const fvcOk  = dFvc  >= 0.10*fvcPred;
-    if (pbdPos){
-      return `Positiva porque ${fev1Ok ? 'ΔFEV1' : 'ΔFVC'} ≥10% del predicho. (ΔFEV1 ${dFev1.toFixed(2)}L vs 10%pred ${(0.10*fev1Pred).toFixed(2)}L · ΔFVC ${dFvc.toFixed(2)}L vs 10%pred ${(0.10*fvcPred).toFixed(2)}L).`;
-    }
-    return `No positiva: ni ΔFEV1 ni ΔFVC alcanzan ≥10% del predicho. (ΔFEV1 ${dFev1.toFixed(2)}L · ΔFVC ${dFvc.toFixed(2)}L).`;
-  }
-
-  function sevFromFev1(p){
-    if (p >= 80) return 'leve';
-    if (p >= 50) return 'moderada';
-    if (p >= 30) return 'grave';
-    return 'muygrave';
   }
 
   function rand(a,b){ return a + Math.random()*(b-a); }
