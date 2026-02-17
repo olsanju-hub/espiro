@@ -1,5 +1,5 @@
 // js/simulador.js
-import { num, escapeHTML } from './utils.js';
+import { num, pctChange, escapeHTML } from './utils.js';
 
 export function renderSimulador(root){
   root.innerHTML = `
@@ -10,14 +10,13 @@ export function renderSimulador(root){
     <div class="hrline"></div>
 
     <div class="card">
-      <div class="small">
-        Recordatorio: interpretar solo si la prueba es aceptable y reproducible.
-      </div>
+      <div class="small">Recordatorio: interpretar solo si la maniobra es aceptable y reproducible.</div>
 
       <form class="form" id="formSim" style="margin-top:10px;">
-        <!-- 1) Imprescindible -->
+        <!-- 1) BASAL (imprescindible) -->
         <div class="card" style="border-radius:16px;">
-          <strong>1) Basal (imprescindible)</strong>
+          <strong>1) Basal</strong>
+
           <div class="row2" style="margin-top:10px;">
             <div class="field">
               <label>FEV1 pre (L)</label>
@@ -29,19 +28,31 @@ export function renderSimulador(root){
             </div>
           </div>
 
-          <div class="row2" style="margin-top:10px;">
-            <div class="field">
-              <label>FEV1 post (L) (si PBD)</label>
-              <input inputmode="decimal" id="fev1Post" placeholder="Ej: 2.35" />
-            </div>
-            <div class="field">
-              <label>FVC post (L) (si PBD)</label>
-              <input inputmode="decimal" id="fvcPost" placeholder="Ej: 3.55" />
-            </div>
+          <div class="small" style="margin-top:8px;">
+            <strong>FEV1/FVC (calculado):</strong> <span id="ratioLive">—</span>
           </div>
+
+          <!-- opcional plegado -->
+          <details style="margin-top:10px;">
+            <summary class="small" style="cursor:pointer;"><strong>Opcional:</strong> valores predichos en litros (si tu informe los trae)</summary>
+            <div class="card" style="border-radius:14px; margin-top:10px;">
+              <strong>Pred (L)</strong>
+              <div class="row2" style="margin-top:10px;">
+                <div class="field">
+                  <label>FEV1 pred (L)</label>
+                  <input inputmode="decimal" id="fev1Pred" placeholder="Ej: 3.20" />
+                </div>
+                <div class="field">
+                  <label>FVC pred (L)</label>
+                  <input inputmode="decimal" id="fvcPred" placeholder="Ej: 4.10" />
+                </div>
+              </div>
+              <div class="small">Si los introduces, la app puede calcular FEV1% y FVC% pred si dejas vacíos los campos de %.</div>
+            </div>
+          </details>
         </div>
 
-        <!-- 2) Umbral -->
+        <!-- 2) UMBRAL FEV1/FVC -->
         <div class="card" style="border-radius:16px; margin-top:12px;">
           <strong>2) Umbral FEV1/FVC</strong>
           <div class="row2" style="margin-top:10px;">
@@ -60,44 +71,38 @@ export function renderSimulador(root){
           <div class="small">Por defecto usa 0,70. Si eliges LLN, se usa el valor que introduzcas.</div>
         </div>
 
-        <!-- 3) Opcionales plegados -->
-        <details class="card" style="border-radius:16px; margin-top:12px; padding:12px;">
-          <summary><strong>Opcional: valores de referencia y % predicho</strong></summary>
-
-          <div class="card" style="border-radius:14px; margin-top:10px;">
-            <strong>Valores de referencia (predicho)</strong>
-            <div class="row2" style="margin-top:10px;">
-              <div class="field">
-                <label>FEV1 pred (L)</label>
-                <input inputmode="decimal" id="fev1Pred" placeholder="Ej: 3.20" />
-              </div>
-              <div class="field">
-                <label>FVC pred (L)</label>
-                <input inputmode="decimal" id="fvcPred" placeholder="Ej: 4.10" />
-              </div>
+        <!-- 3) % PREDICHO (según tu algoritmo) -->
+        <div class="card" style="border-radius:16px; margin-top:12px;">
+          <strong>3) % predicho</strong>
+          <div class="row2" style="margin-top:10px;">
+            <div class="field">
+              <label>FEV1 % pred (recomendado para gravedad)</label>
+              <input inputmode="decimal" id="fev1Pct" placeholder="Ej: 62" />
+              <div class="small">Si lo dejas vacío y pusiste FEV1 pred (L), lo calculo.</div>
             </div>
-            <div class="small">
-              Si los introduces, la app calcula FEV1% y FVC% pred automáticamente si dejas vacíos los campos de %.
-              Además permite evaluar PBD con el criterio ≥10% del predicho.
+            <div class="field">
+              <label>FVC % pred (clave para restricción/mixto)</label>
+              <input inputmode="decimal" id="fvcPct" placeholder="Ej: 74" />
+              <div class="small">Si lo dejas vacío y pusiste FVC pred (L), lo calculo.</div>
             </div>
           </div>
+        </div>
 
-          <div class="card" style="border-radius:14px; margin-top:10px;">
-            <strong>% predicho</strong>
-            <div class="row2" style="margin-top:10px;">
-              <div class="field">
-                <label>FEV1 % pred (opcional)</label>
-                <input inputmode="decimal" id="fev1Pct" placeholder="Ej: 62" />
-                <div class="small">Si lo dejas vacío y pusiste FEV1 pred (L), lo calculo.</div>
-              </div>
-              <div class="field">
-                <label>FVC % pred (recomendado)</label>
-                <input inputmode="decimal" id="fvcPct" placeholder="Ej: 74" />
-                <div class="small">Si lo dejas vacío y pusiste FVC pred (L), lo calculo.</div>
-              </div>
+        <!-- 4) PBD (clásico: ≥12% y ≥200 mL vs basal, en FEV1 o FVC) -->
+        <div class="card" style="border-radius:16px; margin-top:12px;">
+          <strong>4) Prueba broncodilatadora (PBD)</strong>
+          <div class="row2" style="margin-top:10px;">
+            <div class="field">
+              <label>FEV1 post (L)</label>
+              <input inputmode="decimal" id="fev1Post" placeholder="Ej: 2.35" />
+            </div>
+            <div class="field">
+              <label>FVC post (L)</label>
+              <input inputmode="decimal" id="fvcPost" placeholder="Ej: 3.55" />
             </div>
           </div>
-        </details>
+          <div class="small">Criterio clásico: positiva si cumple <strong>≥12% y ≥200 mL</strong> en <strong>FEV1 o FVC</strong> (vs basal).</div>
+        </div>
 
         <div class="action-row" style="margin-top:12px;">
           <button class="btn primary" type="submit">Interpretar</button>
@@ -115,8 +120,27 @@ export function renderSimulador(root){
   const form = root.querySelector('#formSim');
   const out = root.querySelector('#out');
 
+  const fev1PreEl = root.querySelector('#fev1Pre');
+  const fvcPreEl  = root.querySelector('#fvcPre');
+  const ratioLive = root.querySelector('#ratioLive');
+
+  function updateRatioLive(){
+    const fev1Pre = num(fev1PreEl.value);
+    const fvcPre  = num(fvcPreEl.value);
+    if (fev1Pre == null || fvcPre == null || fvcPre <= 0){
+      ratioLive.textContent = '—';
+      return;
+    }
+    const ratio = fev1Pre / fvcPre;
+    ratioLive.textContent = `${ratio.toFixed(2)} (${Math.round(ratio*100)}%)`;
+  }
+
+  fev1PreEl.addEventListener('input', updateRatioLive);
+  fvcPreEl.addEventListener('input', updateRatioLive);
+
   root.querySelector('#resetBtn').addEventListener('click', ()=>{
     form.reset();
+    ratioLive.textContent = '—';
     out.className = 'result warn';
     out.textContent = 'Introduce datos y pulsa “Interpretar”.';
   });
@@ -127,14 +151,11 @@ export function renderSimulador(root){
     const fev1Pre = num(root.querySelector('#fev1Pre').value);
     const fvcPre  = num(root.querySelector('#fvcPre').value);
 
-    const fev1Post = num(root.querySelector('#fev1Post').value);
-    const fvcPost  = num(root.querySelector('#fvcPost').value);
-
     const fev1Pred = num(root.querySelector('#fev1Pred')?.value);
     const fvcPred  = num(root.querySelector('#fvcPred')?.value);
 
-    let fev1Pct = num(root.querySelector('#fev1Pct')?.value);
-    let fvcPct  = num(root.querySelector('#fvcPct')?.value);
+    let fev1Pct = num(root.querySelector('#fev1Pct').value);
+    let fvcPct  = num(root.querySelector('#fvcPct').value);
 
     if (fev1Pre == null || fvcPre == null || fvcPre <= 0){
       out.className = 'result warn';
@@ -142,7 +163,7 @@ export function renderSimulador(root){
       return;
     }
 
-    // Autocalcular %pred si posible y no se ha puesto
+    // Autocalcular %pred si hay pred(L) y % vacío
     if (fev1Pct == null && fev1Pred != null && fev1Pred > 0){
       fev1Pct = (fev1Pre / fev1Pred) * 100;
     }
@@ -152,6 +173,7 @@ export function renderSimulador(root){
 
     const ratio = fev1Pre / fvcPre;
 
+    // Umbral ratio
     const mode = root.querySelector('#ratioMode').value;
     let cutoff = 0.70;
     if (mode === 'lln'){
@@ -164,33 +186,37 @@ export function renderSimulador(root){
       cutoff = lln;
     }
 
+    // Clasificación (coherente con tu diagrama)
     const hasFvcPct = (fvcPct != null);
     const isObs = ratio < cutoff;
     const isLowFvc = hasFvcPct ? (fvcPct < 80) : false;
 
     let pattern = 'Indeterminado';
-    let patternWhy = [];
+    const why = [];
 
-    if (isObs && hasFvcPct && isLowFvc) {
-      pattern = 'Mixto (obstrucción + posible restricción)';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} < ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
-      patternWhy.push('Confirmar restricción con volúmenes pulmonares si es relevante clínicamente.');
-    } else if (isObs) {
-      pattern = 'Obstructivo';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} < ${cutoff.toFixed(2)}`);
-    } else if (!isObs && hasFvcPct && isLowFvc) {
-      pattern = 'Sugerente de restricción';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
-      patternWhy.push('Confirmar restricción con TLC/volúmenes si procede.');
-    } else if (!isObs && hasFvcPct && !isLowFvc) {
-      pattern = 'Normal (según estos parámetros)';
-      patternWhy.push(`FEV1/FVC ${ratio.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} ≥ 80`);
+    if (isObs && hasFvcPct && isLowFvc){
+      pattern = 'Patrón mixto (obstrucción + posible restricción)';
+      why.push(`FEV1/FVC ${ratio.toFixed(2)} < ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
+      why.push('Si importa clínicamente, confirmar restricción con volúmenes (TLC).');
+    } else if (isObs){
+      pattern = 'Patrón obstructivo';
+      why.push(`FEV1/FVC ${ratio.toFixed(2)} < ${cutoff.toFixed(2)}`);
+      if (hasFvcPct) why.push(`FVC %pred ${fvcPct.toFixed(0)} ${isLowFvc ? '< 80 (ojo: podría ser mixto si se confirma)' : '≥ 80 (no sugiere restricción por %pred)'}`);
+    } else if (!isObs && hasFvcPct && isLowFvc){
+      pattern = 'Patrón restrictivo (sugerente)';
+      why.push(`FEV1/FVC ${ratio.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} < 80`);
+      why.push('Confirmar restricción con TLC/volúmenes si procede.');
+    } else if (!isObs && hasFvcPct && !isLowFvc){
+      pattern = 'Patrón normal (con estos parámetros)';
+      why.push(`FEV1/FVC ${ratio.toFixed(2)} ≥ ${cutoff.toFixed(2)} y FVC %pred ${fvcPct.toFixed(0)} ≥ 80`);
     } else {
-      pattern = isObs ? 'Obstructivo' : 'Sin obstrucción por ratio; falta FVC %pred para clasificar restricción';
-      if (!hasFvcPct) patternWhy.push('Falta FVC %pred (o FVC pred): no puedo clasificar restricción/mixto con seguridad.');
+      pattern = isObs
+        ? 'Obstructivo (pero falta FVC %pred para decidir mixto)'
+        : 'Sin obstrucción por ratio; falta FVC %pred para decidir restricción';
+      why.push('Falta FVC %pred (o FVC pred en L).');
     }
 
-    // Gravedad (si obstructivo/mixto y hay FEV1% pred)
+    // Gravedad (GOLD) por FEV1% pred si hay obstrucción
     let severity = null;
     if (isObs && fev1Pct != null){
       const p = fev1Pct;
@@ -200,74 +226,60 @@ export function renderSimulador(root){
       else severity = 'Muy grave (FEV1 <30% pred)';
     }
 
-    // PBD (criterio: Δ ≥ 10% del predicho)
-    let pbdBlock = '';
-    const hasAnyPost = (fev1Post != null || fvcPost != null);
+    // PBD (clásico): positiva si cumple ≥12% y ≥200 mL en FEV1 o FVC
+    const fev1Post = num(root.querySelector('#fev1Post').value);
+    const fvcPost  = num(root.querySelector('#fvcPost').value);
 
-    if (hasAnyPost){
+    let pbd = null;
+    if (fev1Post != null || fvcPost != null){
       const lines = [];
+      let positive = false;
 
-      let pbdVerdict = null; // true/false/null
-      let canVerdict = (fev1Pred != null && fev1Pred > 0) || (fvcPred != null && fvcPred > 0);
-
-      // Siempre mostrar deltas si hay post
       if (fev1Post != null){
         const d = fev1Post - fev1Pre;
-        lines.push(`FEV1: Δ ${d.toFixed(2)} L`);
+        const pc = pctChange(fev1Post, fev1Pre);
+        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        if (ok) positive = true;
+        lines.push(`FEV1: ${d >= 0 ? '+' : ''}${d.toFixed(2)} L (${pc?.toFixed(1)}%) ${ok ? '→ cumple' : ''}`);
+      } else {
+        lines.push('FEV1: —');
       }
+
       if (fvcPost != null){
         const d = fvcPost - fvcPre;
-        lines.push(`FVC: Δ ${d.toFixed(2)} L`);
-      }
-
-      if (canVerdict){
-        const fevOk = (fev1Post != null && fev1Pred != null && fev1Pred > 0)
-          ? ((fev1Post - fev1Pre) >= 0.10*fev1Pred)
-          : false;
-
-        const fvcOk = (fvcPost != null && fvcPred != null && fvcPred > 0)
-          ? ((fvcPost - fvcPre) >= 0.10*fvcPred)
-          : false;
-
-        pbdVerdict = fevOk || fvcOk;
-
-        const threshFev = (fev1Pred != null && fev1Pred > 0) ? (0.10*fev1Pred).toFixed(2) : '—';
-        const threshFvc = (fvcPred != null && fvcPred > 0) ? (0.10*fvcPred).toFixed(2) : '—';
-
-        pbdBlock = `
-          <div style="margin-top:10px;"><strong>PBD:</strong> ${pbdVerdict ? 'Positiva' : 'No positiva'} (criterio Δ ≥10% predicho)</div>
-          <div class="small" style="margin-top:6px;">
-            Umbrales: 10% FEV1 pred = ${threshFev} L · 10% FVC pred = ${threshFvc} L
-            <br>${lines.map(escapeHTML).join('<br>')}
-          </div>
-          <div class="small" style="margin-top:10px;">
-            Nota: PBD positiva no equivale automáticamente a asma; integrar con clínica y evolución.
-          </div>
-        `;
+        const pc = pctChange(fvcPost, fvcPre);
+        const ok = (pc != null && pc >= 12) && (d >= 0.2);
+        if (ok) positive = true;
+        lines.push(`FVC: ${d >= 0 ? '+' : ''}${d.toFixed(2)} L (${pc?.toFixed(1)}%) ${ok ? '→ cumple' : ''}`);
       } else {
-        pbdBlock = `
-          <div style="margin-top:10px;"><strong>PBD:</strong> no puedo dar veredicto sin valores predichos (FEV1 pred/FVC pred).</div>
-          <div class="small" style="margin-top:6px;">${lines.map(escapeHTML).join('<br>')}</div>
-          <div class="small" style="margin-top:10px;">
-            Nota: PBD positiva no equivale automáticamente a asma; integrar con clínica y evolución.
-          </div>
-        `;
+        lines.push('FVC: —');
       }
+
+      pbd = { positive, detail: lines.join('<br>') };
     }
 
     const html = `
-      <div style="font-size:18px;"><strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (umbral ${cutoff.toFixed(2)} · ${mode === 'fixed' ? '0,70' : 'LLN'})</div>
-      <div style="margin-top:10px;"><strong>Patrón:</strong> ${escapeHTML(pattern)}</div>
-      <div class="small" style="margin-top:6px;">${patternWhy.map(x=>`• ${escapeHTML(x)}`).join('<br>')}</div>
+      <div style="font-size:18px;">
+        <strong>FEV1/FVC:</strong> ${ratio.toFixed(2)} (${Math.round(ratio*100)}%)
+        <span class="small">· umbral ${cutoff.toFixed(2)} (${mode === 'fixed' ? '0,70' : 'LLN'})</span>
+      </div>
 
-      <div style="margin-top:10px;"><strong>% pred:</strong>
+      <div style="margin-top:10px;"><strong>Patrón:</strong> ${escapeHTML(pattern)}</div>
+      <div class="small" style="margin-top:6px;">${why.map(x=>`• ${escapeHTML(x)}`).join('<br>')}</div>
+
+      <div style="margin-top:10px;">
+        <strong>% pred:</strong>
         FEV1 ${fev1Pct != null ? fev1Pct.toFixed(0)+'%' : '—'} ·
         FVC ${fvcPct != null ? fvcPct.toFixed(0)+'%' : '—'}
       </div>
 
-      ${severity ? `<div style="margin-top:6px;"><strong>Gravedad obstrucción:</strong> ${escapeHTML(severity)}</div>` : ''}
+      ${severity ? `<div style="margin-top:6px;"><strong>Gravedad (si obstructivo):</strong> ${escapeHTML(severity)}</div>` : ''}
 
-      ${pbdBlock}
+      ${pbd ? `
+        <div style="margin-top:10px;"><strong>PBD:</strong> ${pbd.positive ? 'Positiva' : 'No positiva'} <span class="small">(criterio ≥12% y ≥200 mL en FEV1 o FVC)</span></div>
+        <div class="small" style="margin-top:6px;">${pbd.detail}</div>
+        <div class="small" style="margin-top:8px; opacity:.75;">Nota: PBD positiva ≠ asma. Integrar con clínica, evolución y contexto.</div>
+      ` : ''}
     `;
 
     out.className = 'result';
