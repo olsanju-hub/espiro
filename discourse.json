@@ -3,76 +3,84 @@
     "title": "ESPIROMETRÍA · Interpretación AP",
     "author": "Guillermo José Olivero Sanjuanelo",
     "language": "es-ES",
-    "notes": "Versión clínica-reflexiva. Enfoque práctico para AP. Se evita LLN en el discurso. GOLD basado en FEV1 post-BD. PBD no equivale automáticamente a asma."
+    "notes": "Versión clínica-reflexiva. Enfoque práctico para Atención Primaria. Umbral operativo FEV1/FVC <70%. GOLD basado en FEV1 post-broncodilatador. PBD positiva no equivale automáticamente a asma."
   },
   "slides": {
+
     "001": {
       "title": "Portada",
-      "text": "La idea no es solo saber leer números. Es tener un esquema mental claro para no equivocarnos. Interpretar una espirometría en Atención Primaria significa decidir si hay obstrucción, si podría haber restricción, y qué implicación clínica tiene eso para el paciente que tenemos delante."
+      "text": "La espirometría no es solo leer números. Es seguir un esquema mental ordenado para decidir si existe obstrucción, si puede haber restricción y qué implicación clínica tiene eso en el paciente real que tenemos delante."
     },
+
     "002": {
-      "title": "Qué mide y por qué importa",
-      "text": "La espirometría es probablemente la herramienta más básica que tenemos para estudiar función pulmonar en Atención Primaria. Es accesible, es relativamente económica y no es invasiva. Por eso la usamos tanto en EPOC, en asma, en seguimiento… incluso como apoyo diagnóstico cuando hay dudas. Pero tiene una limitación importante: depende completamente de la técnica y de la colaboración del paciente. Si la maniobra es mala, si el paciente no sopla bien, si el técnico no corrige errores… el número que obtenemos puede ser engañoso. Y por eso la frase clave de esta diapositiva es muy sencilla: sin calidad técnica, no hay interpretación posible.Antes de hablar de patrones o de diagnósticos, tenemos que asegurarnos de que la prueba es válida."
+      "title": "Introducción",
+      "text": "Es la prueba básica para el estudio de la función pulmonar y el seguimiento de patología respiratoria como EPOC o asma. Es accesible, económica y no invasiva, por eso la usamos tanto en Atención Primaria. Pero depende completamente de la técnica y de la colaboración del paciente. Si la maniobra es incorrecta, el resultado puede ser engañoso. Sin calidad técnica no hay interpretación posible."
     },
+
     "003": {
-      "title": "Calidad: aceptabilidad",
-      "text": "Si la maniobra no es técnicamente válida, no hay nada que interpretar. Inicio explosivo, sin tos precoz, sin fugas, sin cierre glótico… Si eso falla, repetir. A veces queremos sacar conclusiones rápido, pero una curva mala invalida todo lo que viene después."
+      "title": "Indicaciones y contraindicaciones",
+      "text": "Está indicada ante síntomas respiratorios, en cribado de fumadores y en seguimiento de patología conocida. Debemos evitarla en inestabilidad hemodinámica, hemoptisis aguda, neumotórax o IAM reciente. En contraindicaciones relativas, valorar siempre riesgo-beneficio. No es una prueba inocua si se hace sin criterio."
     },
+
     "004": {
-      "title": "Calidad: repetibilidad",
-      "text": "Necesitamos consistencia. Al menos tres maniobras aceptables y dos reproducibles. Si las cifras cambian mucho entre intentos, el problema puede ser técnico, no pulmonar. Sin repetibilidad, la interpretación pierde fiabilidad clínica."
+      "title": "Preparación previa",
+      "text": "Antes de realizar la prueba debemos asegurar condiciones adecuadas: evitar tabaco o ejercicio intenso previo y respetar tiempos de suspensión de broncodilatadores. En la prueba broncodilatadora, salbutamol 400 mcg y repetir a los 15–20 minutos. Una mala preparación puede falsear la interpretación."
     },
+
     "005": {
-      "title": "Paso 1: ¿hay obstrucción?",
-      "text": "El punto clave es el cociente FEV1/FVC. En la práctica usamos <0,70 como umbral operativo. Si está por debajo, pensamos en obstrucción. No es perfecto, pero en AP es práctico y consistente. Lo importante es no saltar este paso."
+      "title": "Conceptos básicos: qué medimos",
+      "text": "FEV1 es el volumen espirado en el primer segundo. FVC es la capacidad vital forzada total. El cociente FEV1/FVC es el parámetro diagnóstico clave para obstrucción. En la curva volumen-tiempo, el plateau o meseta final indica que la espiración se ha completado adecuadamente. En la curva flujo-volumen analizamos la morfología: el ascenso inicial, el pico y la presencia o no de concavidad. Primero curvas, luego números."
     },
+
     "006": {
-      "title": "Paso 2: FVC y patrón",
-      "text": "Una vez definido el cociente, miramos la FVC. Si el cociente es normal y la FVC está baja, pensamos en restricción, pero ojo: eso no confirma restricción real. Necesitaríamos volúmenes pulmonares. Si el cociente está bajo y la FVC también, hablamos de patrón mixto… o de obstrucción con atrapamiento. Aquí la clínica y el contexto son fundamentales."
+      "title": "Control de calidad: aceptabilidad",
+      "text": "La maniobra debe comenzar con inicio explosivo y volumen extrapolado <5% o <100 ml. No debe haber tos precoz, fugas ni cierre glótico. La espiración debe mantenerse al menos 6 segundos con meseta final. Si no cumple criterios de aceptabilidad, no se interpreta."
     },
+
     "007": {
-      "title": "Patrón obstructivo",
-      "text": "Obstrucción significa limitación al flujo aéreo. El cociente está reducido. La morfología de la curva ayuda —esa concavidad espiratoria típica— pero el diagnóstico lo marca el cociente. A partir de aquí la pregunta ya no es si hay obstrucción, sino qué la causa."
+      "title": "Control de calidad: reproducibilidad",
+      "text": "Se requieren al menos tres maniobras aceptables. La diferencia entre los dos mejores FEV1 y FVC debe ser menor de 150 ml en adultos. Si no hay reproducibilidad, el problema puede ser técnico y no fisiopatológico."
     },
+
     "008": {
-      "title": "Patrón restrictivo y mixto",
-      "text": "Restrictivo: FVC baja con cociente conservado. Mixto: cociente bajo y FVC baja. Pero cuidado: una FVC baja en obstrucción puede ser atrapamiento y no verdadera restricción. Confirmar restricción exige volúmenes pulmonares. Sin TLC no podemos asegurarlo."
+      "title": "Patrón normal",
+      "text": "Función pulmonar dentro de la normalidad sin evidencia de obstrucción ni restricción. FEV1/FVC ≥70% y FEV1 y FVC ≥80% del valor teórico. Morfología normal en la curva flujo-volumen, sin concavidad y con ascenso rápido al pico de flujo."
     },
+
     "009": {
-      "title": "Prueba broncodilatadora (PBD)",
-      "text": "La PBD nos habla de reversibilidad. Comparamos pre y post broncodilatador. Es útil para caracterizar el patrón, pero no debemos convertir automáticamente una respuesta positiva en diagnóstico de asma. Eso sería simplificar demasiado."
+      "title": "Patrón obstructivo",
+      "text": "Se define por FEV1/FVC <70%. El FEV1 está disminuido y determina la gravedad. La FVC puede ser normal o estar reducida por atrapamiento aéreo. En la curva flujo-volumen aparece concavidad en la rama espiratoria."
     },
+
     "010": {
-      "title": "Criterio ≥12% y ≥200 ml",
-      "text": "Criterio clásico: incremento ≥12% y ≥200 ml en FEV1 o FVC. Es el estándar práctico. Pero tiene limitaciones: puede haber reversibilidad en EPOC y puede no haberla en asma fuera de crisis. Por eso siempre debemos integrar con la clínica."
+      "title": "Clasificación GOLD",
+      "text": "La gravedad de la obstrucción en EPOC se basa en el FEV1 post-broncodilatador. Leve ≥80%, moderado 50–79%, grave 30–49%, muy grave <30%. La clasificación no define el diagnóstico, solo el grado de severidad una vez confirmada la obstrucción."
     },
+
     "011": {
-      "title": "Obstrucción persistente pos-BD",
-      "text": "En EPOC, el rasgo definitorio es que la obstrucción persiste tras broncodilatador. El FEV1 puede mejorar, pero si el cociente sigue <0,70, la obstrucción es persistente. Esa persistencia es lo que tiene implicación diagnóstica."
+      "title": "Patrón restrictivo",
+      "text": "FEV1/FVC normal o elevado con FVC disminuida (<80%). El FEV1 disminuye de forma proporcional. La espirometría solo sugiere restricción; debe confirmarse con medición de volúmenes pulmonares en ámbito hospitalario."
     },
+
     "012": {
-      "title": "Severidad (GOLD) con post-BD",
-      "text": "Si hay obstrucción, graduamos con el FEV1 post-broncodilatador en porcentaje del predicho. Usar el post evita sobreestimar gravedad por broncoconstricción reversible. Esto es importante porque influye en la estratificación y el manejo."
+      "title": "Patrón mixto",
+      "text": "Existe obstrucción (FEV1/FVC <70%) y además FVC disminuida. Combina limitación al flujo y reducción de volúmenes. Requiere estudio completo para confirmar componente restrictivo verdadero."
     },
+
     "013": {
-      "title": "GOLD: rangos orientativos",
-      "text": "Leve ≥80%, moderado 50–79%, grave 30–49%, muy grave <30%. Es una clasificación funcional. No define síntomas ni riesgo por sí sola, pero ayuda a contextualizar el grado de limitación fisiológica."
+      "title": "Prueba broncodilatadora (PBD)",
+      "text": "Se administra salbutamol 400 mcg y se repite la espirometría tras 15–20 minutos. Es positiva si FEV1 o FVC aumentan ≥12% y ≥200 ml respecto al basal. Positividad no implica reversibilidad completa ni confirma automáticamente asma."
     },
+
     "014": {
-      "title": "Qué hacer con un patrón normal",
-      "text": "Un patrón normal no excluye enfermedad. En asma, la espirometría puede ser normal fuera de crisis. Si la sospecha clínica es fuerte, el estudio no termina aquí. A veces el seguimiento y la variabilidad aportan más que una prueba aislada."
+      "title": "Algoritmo de interpretación",
+      "text": "Secuencia lógica: comprobar calidad → valorar FEV1/FVC → si ≥70%, analizar FVC para descartar restricción; si <70%, confirmar obstrucción y clasificar gravedad con FEV1 post-broncodilatador. El orden evita errores diagnósticos."
     },
+
     "015": {
-      "title": "Qué hacer con patrón obstructivo",
-      "text": "Con obstrucción, integramos con clínica: edad, tabaquismo, variabilidad de síntomas, antecedentes. Si persiste tras broncodilatador, pensamos en EPOC; si hay clara variabilidad y reversibilidad, asma es más probable. Pero el diagnóstico nunca lo hace solo el espirómetro."
-    },
-    "016": {
-      "title": "Qué hacer con restrictivo/mixto",
-      "text": "Ante sospecha de restricción o patrón mixto, el siguiente paso no es tratar a ciegas, sino ampliar estudio. Volúmenes pulmonares, contexto clínico, imagen si procede. La espirometría orienta, pero no siempre cierra el diagnóstico."
-    },
-    "017": {
-      "title": "Cierre",
-      "text": "En resumen: calidad primero, después patrón con FEV1/FVC, luego FVC para orientar restricción o mixto, PBD si procede, y si hay obstrucción, severidad con FEV1 post-BD. Y siempre, siempre integrar con la clínica. El espirómetro ayuda, pero no sustituye al razonamiento clínico."
+      "title": "Mensajes clave",
+      "text": "Calidad antes que cantidad. Primero curvas, luego cifras. El cociente FEV1/FVC define obstrucción. El FEV1 post-broncodilatador define gravedad. La espirometría no es un número aislado, es una secuencia lógica integrada en el contexto clínico."
     }
+
   }
 }
